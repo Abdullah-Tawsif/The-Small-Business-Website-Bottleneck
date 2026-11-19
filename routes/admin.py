@@ -5,7 +5,7 @@ import logging
 from datetime import datetime
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, StrictBool
 from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -24,7 +24,7 @@ router = APIRouter(
 
 
 # --------------------------------------------------
-# RESPONSE SCHEMAS
+# PYDANTIC MODELS
 # --------------------------------------------------
 
 class AdminUserListItem(BaseModel):
@@ -39,7 +39,7 @@ class AdminUserListItem(BaseModel):
 
 
 class AdminUserListResponse(BaseModel):
-    """Paginated administrator user listing."""
+    """Paginated user listing."""
 
     items: list[AdminUserListItem]
     total: int
@@ -48,22 +48,22 @@ class AdminUserListResponse(BaseModel):
     total_pages: int
 
 
-class StaffAccountStatusUpdate(BaseModel):
-    """Only the active status may be changed."""
+class UserStatusUpdate(BaseModel):
+    """Request model allowing only an active-status change."""
 
     model_config = ConfigDict(extra="forbid")
 
-    is_active: bool
+    is_active: StrictBool
 
 
 # --------------------------------------------------
-# GET ALL USERS
+# GET /api/admin/users
 # --------------------------------------------------
 
 @router.get(
     "/users",
     response_model=AdminUserListResponse,
-    summary="List all registered users",
+    summary="List registered users",
 )
 def list_users(
     page: int = Query(1, ge=1),
@@ -71,7 +71,7 @@ def list_users(
     db: Session = Depends(get_db),
     admin: User = Depends(get_current_admin_user),
 ):
-    """Return a paginated list of users."""
+    """Return paginated user information to administrators."""
 
     try:
         total = db.scalar(
@@ -113,9 +113,7 @@ def list_users(
     except SQLAlchemyError as exc:
         db.rollback()
 
-        logger.exception(
-            "Database error while retrieving administrator user list."
-        )
+        logger.exception("Failed to retrieve administrator user list.")
 
         raise HTTPException(
             status_code=503,
@@ -124,25 +122,25 @@ def list_users(
 
 
 # --------------------------------------------------
-# ACTIVATE / DEACTIVATE STAFF ACCOUNT
+# PATCH /api/admin/users/{user_id}/status
 # --------------------------------------------------
 
 @router.patch(
     "/users/{user_id}/status",
     response_model=AdminUserListItem,
-    summary="Activate or deactivate a staff account",
+    summary="Activate or deactivate a user account",
 )
-def update_staff_account_status(
+def update_user_status(
     user_id: int = Path(..., ge=1),
-    payload: StaffAccountStatusUpdate = Body(...),
+    payload: UserStatusUpdate = Body(...),
     db: Session = Depends(get_db),
     admin: User = Depends(get_current_admin_user),
 ):
     """
-    Change the active status of an existing staff account.
+    Activate or deactivate an existing account.
 
-    Administrator accounts cannot be modified through this endpoint.
-    Account roles are never changed.
+    The administrator cannot deactivate their own account.
+    User roles cannot be modified through this endpoint.
     """
 
     try:
@@ -158,13 +156,15 @@ def update_staff_account_status(
                 detail="User not found.",
             )
 
-        # Only staff accounts can be activated or deactivated.
-        if target_user.role != "staff":
+        # Prevent accidental loss of the current administrator session.
+        if target_user.id == admin.id and payload.is_active is False:
             raise HTTPException(
-                status_code=403,
-                detail="Only staff accounts can be modified through this endpoint.",
+                status_code=400,
+                detail="You cannot deactivate your own administrator account.",
             )
 
+        # Only update the active-status field.
+        # The user's role and all other account properties remain unchanged.
         target_user.is_active = payload.is_active
 
         db.commit()
@@ -183,7 +183,7 @@ def update_staff_account_status(
         db.rollback()
 
         logger.exception(
-            "Database error while updating staff account status."
+            "Failed to update user account status."
         )
 
         raise HTTPException(
