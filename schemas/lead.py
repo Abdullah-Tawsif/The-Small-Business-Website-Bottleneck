@@ -1,215 +1,109 @@
 
-from datetime import date, datetime
-from decimal import Decimal
-from typing import Literal
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from database.database import get_db
+from models.lead import Lead
+from models.package import Package
+from schemas.lead import LeadCreate, LeadResponse
 
 
 # --------------------------------------------------
-# 1. ANALYTICS DATE FILTER
+# 1. ROUTER CONFIGURATION
 # --------------------------------------------------
 
-class AnalyticsFilter(BaseModel):
+router = APIRouter(
+    prefix="/api/leads",
+    tags=["Leads"],
+)
+
+
+# --------------------------------------------------
+# 2. CREATE A NEW LEAD
+# --------------------------------------------------
+
+@router.post(
+    "/",
+    response_model=LeadResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_lead(
+    lead_data: LeadCreate,
+    db: Session = Depends(get_db),
+):
     """
-    Defines the date range for analytics queries.
+    Receives a customer inquiry and saves it
+    as a new lead in PostgreSQL.
     """
 
-    start_date: date
-    end_date: date
+    # Verify that the selected package exists
+    if lead_data.package_id is not None:
 
-    @model_validator(mode="after")
-    def validate_date_range(self):
+        package = db.get(Package, lead_data.package_id)
 
-        if self.end_date < self.start_date:
-            raise ValueError(
-                "End date cannot be earlier than start date."
+        if package is None or not package.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Selected package does not exist or is unavailable.",
             )
 
-        return self
+    # Convert validated Pydantic data into a dictionary
+    lead_data_dict = lead_data.model_dump()
+
+    # Create SQLAlchemy lead object
+    new_lead = Lead(
+        **lead_data_dict,
+        status="new",
+    )
+
+    # Save lead in PostgreSQL
+    try:
+        db.add(new_lead)
+        db.commit()
+        db.refresh(new_lead)
+
+    except IntegrityError:
+        db.rollback()
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unable to save lead because of invalid data.",
+        )
+
+    return new_lead
 
 
 # --------------------------------------------------
-# 2. LEAD STATUS ANALYTICS
+# 3. CHECK LEAD EXISTENCE
 # --------------------------------------------------
 
-LeadStatus = Literal[
-    "new",
-    "contacted",
-    "qualified",
-    "proposal_sent",
-    "won",
-    "lost",
-]
-
-
-class LeadStatusCount(BaseModel):
+@router.get(
+    "/check/{lead_id}",
+)
+def check_lead(
+    lead_id: int,
+    db: Session = Depends(get_db),
+):
     """
-    Number of leads belonging to each status.
-    """
+    Checks whether a lead exists.
 
-    status: LeadStatus
-
-    count: int = Field(
-        ge=0,
-    )
-
-
-# --------------------------------------------------
-# 3. PACKAGE PERFORMANCE
-# --------------------------------------------------
-
-class PackagePerformance(BaseModel):
-    """
-    Analytics for individual website packages.
+    Returns only basic information, not private
+    customer or project details.
     """
 
-    package_id: int | None
+    lead = db.get(Lead, lead_id)
 
-    package_name: str
+    if lead is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Lead not found.",
+        )
 
-    total_leads: int = Field(
-        ge=0,
-    )
-
-    won_leads: int = Field(
-        ge=0,
-    )
-
-    estimated_min_value: Decimal = Field(
-        ge=0,
-    )
-
-    estimated_max_value: Decimal = Field(
-        ge=0,
-    )
-
-    @model_validator(mode="after")
-    def validate_performance(self):
-
-        if self.won_leads > self.total_leads:
-            raise ValueError(
-                "Won leads cannot exceed total leads."
-            )
-
-        if self.estimated_max_value < self.estimated_min_value:
-            raise ValueError(
-                "Maximum estimated value cannot be lower "
-                "than minimum estimated value."
-            )
-
-        return self
-
-
-# --------------------------------------------------
-# 4. LEAD ANALYTICS SUMMARY
-# --------------------------------------------------
-
-class LeadAnalytics(BaseModel):
-    """
-    Overall statistics about customer leads.
-    """
-
-    total_leads: int = Field(
-        ge=0,
-    )
-
-    status_breakdown: list[LeadStatusCount] = Field(
-        default_factory=list,
-    )
-
-    conversion_rate: Decimal = Field(
-        ge=0,
-        le=100,
-    )
-
-    won_leads: int = Field(
-        ge=0,
-    )
-
-    lost_leads: int = Field(
-        ge=0,
-    )
-
-    @model_validator(mode="after")
-    def validate_lead_statistics(self):
-
-        if self.won_leads + self.lost_leads > self.total_leads:
-            raise ValueError(
-                "Won and lost leads cannot exceed total leads."
-            )
-
-        return self
-
-
-# --------------------------------------------------
-# 5. ESTIMATED PIPELINE VALUE
-# --------------------------------------------------
-
-class PipelineAnalytics(BaseModel):
-    """
-    Tracks the estimated value of customer opportunities.
-    These figures are estimates, not actual revenue.
-    """
-
-    currency: str = Field(
-        default="BDT",
-        pattern=r"^[A-Z]{3}$",
-    )
-
-    estimated_min_value: Decimal = Field(
-        ge=0,
-    )
-
-    estimated_max_value: Decimal = Field(
-        ge=0,
-    )
-
-    @model_validator(mode="after")
-    def validate_pipeline_values(self):
-
-        if self.estimated_max_value < self.estimated_min_value:
-            raise ValueError(
-                "Maximum pipeline value cannot be lower "
-                "than minimum pipeline value."
-            )
-
-        return self
-
-
-# --------------------------------------------------
-# 6. COMPLETE DASHBOARD RESPONSE
-# --------------------------------------------------
-
-class AnalyticsDashboard(BaseModel):
-    """
-    Complete analytics response for the admin dashboard.
-    """
-
-    model_config = ConfigDict(
-        from_attributes=True,
-    )
-
-    generated_at: datetime
-
-    period_start: date
-
-    period_end: date
-
-    leads: LeadAnalytics
-
-    pipeline: PipelineAnalytics
-
-    package_performance: list[PackagePerformance] = Field(
-        default_factory=list,
-    )
-
-    @model_validator(mode="after")
-    def validate_dashboard_period(self):
-
-        if self.period_end < self.period_start:
-            raise ValueError(
-                "Dashboard end date cannot precede start date."
-            )
-
-        return self
+    return {
+        "id": lead.id,
+        "status": lead.status,
+        "created_at": lead.created_at,
+        "exists": True,
+    }
