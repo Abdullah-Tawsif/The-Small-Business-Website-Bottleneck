@@ -5,7 +5,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const input = button.parentElement.querySelector("input");
       const show = input.type === "password";
       input.type = show ? "text" : "password";
-      button.textContent = show ? "Hide" : "Show";
       button.setAttribute("aria-label", show ? "Hide password" : "Show password");
     });
   });
@@ -16,40 +15,22 @@ document.addEventListener("DOMContentLoaded", () => {
     menu.setAttribute("aria-expanded", String(open));
     links.classList.toggle("is-open", open);
   });
-
-  document.querySelectorAll(".auth-form").forEach((form) => form.addEventListener("submit", async (event) => {
+  document.querySelectorAll(".auth-form").forEach((form) => form.addEventListener("submit", (event) => {
     event.preventDefault();
     const data = new FormData(form);
+    const email = String(data.get("email") || "").trim();
+    const password = String(data.get("password") || "");
+    let error = "";
+    if (!email || !email.includes("@")) error = "Please enter a valid email address.";
+    else if (!password) error = "Please enter your password.";
+    else if (form.dataset.form === "register") {
+      if (String(data.get("name") || "").trim().length < 2) error = "Please enter your full name.";
+      else if (password.length < 8) error = "Use at least 8 characters for your password.";
+      else if (password !== String(data.get("confirm") || "")) error = "Your passwords do not match.";
+    }
     const message = form.querySelector(".form-message");
-    const button = form.querySelector('button[type="submit"]');
-    const payload = { email: String(data.get("email") || "").trim(), password: String(data.get("password") || "") };
-    if (form.dataset.form === "register") {
-      payload.full_name = String(data.get("name") || "").trim();
-      if (payload.password !== String(data.get("confirm") || "")) {
-        message.textContent = "Your passwords do not match.";
-        message.className = "form-message is-error";
-        return;
-      }
-    }
-    message.textContent = "";
-    message.className = "form-message";
-    button.disabled = true;
-    const originalText = button.textContent;
-    button.textContent = "Please wait…";
-    try {
-      const endpoint = form.dataset.form === "register" ? "/api/auth/register" : "/api/auth/login";
-      const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify(payload) });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.detail || "Unable to complete your request.");
-      message.textContent = result.message || "Success.";
-      message.className = "form-message is-success";
-      window.location.assign(result.redirect_url || "/dashboard");
-    } catch (error) {
-      message.textContent = error.message || "Something went wrong. Please try again.";
-      message.className = "form-message is-error";
-    } finally {
-      button.disabled = false;
-      button.textContent = originalText;
-    }
+    message.textContent = error || "Form validation passed. Account submission will be enabled after the authentication API is integrated.";
+    message.classList.toggle("is-error", Boolean(error));
+    message.classList.toggle("is-success", !error);
   }));
 });

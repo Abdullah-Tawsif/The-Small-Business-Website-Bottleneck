@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>My workspace — Scopewise</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="/static/css/base.css"><link rel="stylesheet" href="/static/css/user/user.css"><script src="https://unpkg.com/lucide@latest"></script></head>
+<body class="app-page"><div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
+<nav class="site-nav app-nav"><a class="brand" href="/"><span class="brand-mark">S</span><span>scopewise</span></a><div class="nav-links"><a href="/dashboard">Dashboard</a><a href="/" class="muted-link">Back to home</a><a class="nav-login" href="#" id="logout-button">Sign out</a></div></nav>
+<main class="app-shell">
+<section class="app-header"><div class="app-header-copy"><span class="section-kicker">Your workspace</span><h1>Hello, <span>{{ user.full_name }}.</span></h1><p>Track your scoping sessions and project briefs in one place.</p></div><div class="app-header-stats"><div class="stat-chip"><small>Sessions</small><strong id="stat-sessions">0</strong></div><div class="stat-chip"><small>Drafts</small><strong id="stat-drafts">0</strong></div><div class="stat-chip"><small>Completed</small><strong id="stat-done">0</strong></div></div></section>
+
+<section class="app-grid">
+<article class="app-panel"><div class="panel-top"><h2>Recent activity</h2><span class="panel-hint">Your latest sessions</span></div><div class="activity-list" id="activity-list"><div class="table-empty">No activity yet. Start a new scoping session to see it here.</div></div></article>
+<article class="app-panel panel-side"><div class="panel-top"><h2>Quick actions</h2></div><div class="action-list"><a class="action-row" href="/dashboard"><i data-lucide="layout-dashboard"></i><div><strong>Open dashboard</strong><span>Your personal overview</span></div><i data-lucide="arrow-up-right" class="action-go"></i></a><a class="action-row" href="/"><i data-lucide="home"></i><div><strong>Back to home</strong><span>Marketing landing page</span></div><i data-lucide="arrow-up-right" class="action-go"></i></a></div><div class="profile-card"><div class="profile-avatar">{{ user.full_name[:1] }}</div><div class="profile-meta"><strong>{{ user.full_name }}</strong><span class="cell-muted">{{ user.email }}</span><span class="tag tag-active">Active</span></div></div></article>
+</section>
+</main>
+<footer class="site-footer section-shell"><a class="brand" href="/"><span class="brand-mark">S</span><span>scopewise</span></a><span>© 2026 Scopewise. Built for better beginnings.</span><div><a href="/dashboard">Dashboard</a><a href="/">Home</a></div></footer>
+<script>
+document.getElementById('logout-button').addEventListener('click',async(e)=>{e.preventDefault();const r=await fetch('/api/auth/logout',{method:'POST',credentials:'same-origin'});if(r.ok)location.href='/login';});
+document.addEventListener('DOMContentLoaded',()=>{if(window.lucide)window.lucide.createIcons();});
+</script></body></html>

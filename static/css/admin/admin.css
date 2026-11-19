@@ -1,0 +1,76 @@
+@import url('../base.css');
+
+.app-page { min-height: 100vh; }
+.app-page .site-nav,
+.app-page main,
+.app-page .site-footer { position: relative; }
+
+.app-nav { background: rgba(255,255,255,.7); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
+
+.nav-role-badge {
+  padding: 5px 11px; border-radius: 99px; background: var(--mint);
+  color: var(--green-dark); font-size: 11px; font-weight: 800;
+  letter-spacing: .08em; text-transform: uppercase;
+}
+
+.app-shell { width: min(1140px, calc(100% - 64px)); margin: 50px auto 80px; }
+
+.app-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 40px; margin-bottom: 36px; }
+.app-header-copy h1 { font: 800 clamp(38px, 5vw, 54px)/1.05 Manrope, sans-serif; letter-spacing: -.06em; margin: 15px 0 10px; }
+.app-header-copy p { color: var(--muted); font-size: 15px; margin: 0; max-width: 420px; }
+
+.app-header-stats { display: flex; gap: 12px; }
+.stat-chip { display: flex; flex-direction: column; gap: 4px; padding: 16px 22px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.7); min-width: 120px; }
+.stat-chip small { font-size: 11px; color: var(--muted); font-weight: 600; }
+.stat-chip strong { font: 800 26px Manrope, sans-serif; color: var(--green-dark); }
+
+.app-panel { background: rgba(255,255,255,.72); border: 1px solid var(--line); border-radius: 14px; margin-bottom: 18px; overflow: hidden; }
+.panel-top { display: flex; align-items: baseline; justify-content: space-between; padding: 22px 26px; border-bottom: 1px solid #e9efee; }
+.panel-top h2 { font: 700 20px Manrope, sans-serif; letter-spacing: -.03em; margin: 0; }
+.panel-hint { font-size: 12px; color: var(--muted); }
+
+.panel-table { display: flex; flex-direction: column; }
+.table-head, .table-row { display: grid; grid-template-columns: 1.2fr 1.4fr .8fr .8fr 1fr; gap: 16px; padding: 14px 26px; align-items: center; font-size: 13px; }
+.table-head { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #91a09e; font-weight: 700; border-bottom: 1px solid #eef3f1; }
+.table-row { border-bottom: 1px solid #f1f5f4; transition: background .18s ease; }
+.table-row:hover { background: #f6fbf8; }
+.table-row:last-child { border-bottom: 0; }
+.cell-muted { color: var(--muted); }
+.table-empty { padding: 36px 26px; text-align: center; color: var(--muted); font-size: 13px; }
+
+.tag { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 99px; font-size: 11px; font-weight: 700; }
+.tag-admin { background: var(--mint); color: var(--green-dark); }
+.tag-staff { background: var(--blue); color: #3d789b; }
+.tag-active { background: #e6f7ec; color: var(--green-dark); }
+.tag-inactive { background: #f4e7e7; color: #c54a4a; }
+.tag-stage { background: var(--sand); color: #a47735; }
+
+.app-grid { display: grid; grid-template-columns: 1.4fr .9fr; gap: 18px; }
+.panel-tall { margin-bottom: 0; }
+.panel-tall .table-head, .panel-tall .table-row { grid-template-columns: 1.4fr 1fr .8fr; }
+
+.action-list { display: flex; flex-direction: column; padding: 8px; }
+.action-row { display: flex; align-items: center; gap: 14px; padding: 14px 18px; border-radius: 10px; transition: background .18s ease; }
+.action-row:hover { background: #f6fbf8; }
+.action-row > i[data-lucide]:first-child { width: 20px; color: var(--green-dark); flex: none; }
+.action-row div { display: flex; flex-direction: column; gap: 2px; }
+.action-row strong { font-size: 14px; font-weight: 700; color: var(--ink); }
+.action-row span { font-size: 12px; color: var(--muted); }
+.action-go { margin-left: auto; width: 15px; color: #b6c2c0; }
+
+@media (max-width: 900px) {
+  .app-header { flex-direction: column; align-items: flex-start; gap: 26px; }
+  .app-header-stats { flex-wrap: wrap; }
+  .app-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 780px) {
+  .app-shell { width: min(100% - 40px, 1140px); }
+  .table-head { display: none; }
+  .table-row { grid-template-columns: 1fr 1fr; gap: 10px; padding: 16px 18px; }
+  .panel-tall .table-row { grid-template-columns: 1fr 1fr; }
+  .stat-chip { min-width: 100px; padding: 13px 16px; }
+}
+@media (max-width: 480px) {
+  .app-header-stats { flex-direction: column; gap: 10px; }
+  .stat-chip { width: 100%; flex-direction: row; align-items: center; justify-content: space-between; }
+}
