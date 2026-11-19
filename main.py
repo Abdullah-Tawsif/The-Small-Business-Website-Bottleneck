@@ -10,6 +10,9 @@ from middleware.rate_limiter import InMemoryRateLimitMiddleware
 from models.user import User
 from database.database import init_db
 from routes.auth import router as auth_router
+from routes.leads import router as leads_router
+from routes.analytics import router as analytics_router
+from models.ai_session import AISession
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -22,6 +25,8 @@ app = FastAPI(title="AgencyForge", version="0.2.0", lifespan=lifespan)
 app.add_middleware(InMemoryRateLimitMiddleware)
 register_error_handlers(app)
 app.include_router(auth_router)
+app.include_router(leads_router)
+app.include_router(analytics_router)
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
