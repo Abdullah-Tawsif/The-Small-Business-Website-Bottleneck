@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Any
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     CheckConstraint,
     DateTime,
@@ -12,12 +13,17 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    Uuid,
     func,
 )
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from database.database import Base
+
+
+# SQLite uses JSON; PostgreSQL uses native JSONB.
+AI_SESSION_JSON_TYPE = JSON().with_variant(JSONB(), "postgresql")
 
 
 class AISession(Base):
@@ -69,7 +75,7 @@ class AISession(Base):
     # --------------------------------------------------
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid(as_uuid=True),
         primary_key=True,
         default=uuid.uuid4,
     )
@@ -103,7 +109,7 @@ class AISession(Base):
 
     conversation_history: Mapped[list[dict[str, Any]]] = (
         mapped_column(
-            JSONB,
+            AI_SESSION_JSON_TYPE,
             default=list,
             nullable=False,
         )
