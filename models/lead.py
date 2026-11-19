@@ -3,6 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import (
+    JSON,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -16,6 +17,10 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from database.database import Base
+
+
+# SQLite uses JSON; PostgreSQL uses native JSONB.
+LEAD_JSON_TYPE = JSON().with_variant(JSONB(), "postgresql")
 
 
 class Lead(Base):
@@ -48,19 +53,13 @@ class Lead(Base):
         Index("ix_leads_email", "email"),
     )
 
-    # --------------------------------------------------
     # 1. PRIMARY KEY
-    # --------------------------------------------------
-
     id: Mapped[int] = mapped_column(
         primary_key=True,
         index=True,
     )
 
-    # --------------------------------------------------
     # 2. CUSTOMER INFORMATION
-    # --------------------------------------------------
-
     contact_name: Mapped[str] = mapped_column(
         String(150),
         nullable=False,
@@ -86,23 +85,20 @@ class Lead(Base):
         nullable=False,
     )
 
-    # --------------------------------------------------
     # 3. PROJECT REQUIREMENTS
-    # --------------------------------------------------
-
     project_description: Mapped[str] = mapped_column(
         Text,
         nullable=False,
     )
 
     required_pages: Mapped[list[str]] = mapped_column(
-        JSONB,
+        LEAD_JSON_TYPE,
         default=list,
         nullable=False,
     )
 
     required_features: Mapped[list[str]] = mapped_column(
-        JSONB,
+        LEAD_JSON_TYPE,
         default=list,
         nullable=False,
     )
@@ -112,10 +108,7 @@ class Lead(Base):
         nullable=True,
     )
 
-    # --------------------------------------------------
     # 4. CUSTOMER BUDGET
-    # --------------------------------------------------
-
     budget_min: Mapped[Decimal | None] = mapped_column(
         Numeric(12, 2),
         nullable=True,
@@ -126,10 +119,7 @@ class Lead(Base):
         nullable=True,
     )
 
-    # --------------------------------------------------
     # 5. AI-GENERATED SCOPE AND ESTIMATE
-    # --------------------------------------------------
-
     ai_scope_summary: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
@@ -151,10 +141,7 @@ class Lead(Base):
         nullable=True,
     )
 
-    # --------------------------------------------------
     # 6. LEAD STATUS
-    # --------------------------------------------------
-
     status: Mapped[str] = mapped_column(
         String(30),
         default="new",
@@ -162,20 +149,14 @@ class Lead(Base):
         index=True,
     )
 
-    # --------------------------------------------------
     # 7. CURRENCY
-    # --------------------------------------------------
-
     currency: Mapped[str] = mapped_column(
         String(3),
         default="BDT",
         nullable=False,
     )
 
-    # --------------------------------------------------
     # 8. TIMESTAMPS
-    # --------------------------------------------------
-
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -189,10 +170,7 @@ class Lead(Base):
         nullable=False,
     )
 
-    # --------------------------------------------------
     # 9. OBJECT REPRESENTATION
-    # --------------------------------------------------
-
     def __repr__(self) -> str:
         return (
             f"<Lead("
