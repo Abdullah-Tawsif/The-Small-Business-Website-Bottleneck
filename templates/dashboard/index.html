@@ -1,0 +1,5 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Dashboard — Scopewise</title><link rel="stylesheet" href="/static/css/base.css"></head>
+<body class="auth-page"><main class="auth-shell"><section class="auth-card"><a class="brand auth-brand" href="/"><span class="brand-mark">S</span><span>scopewise</span></a><div class="auth-heading"><span class="section-kicker">Your workspace</span><h1>Welcome, <span>{{ user.full_name }}.</span></h1><p>You’re signed in. Your AgencyForge workspace is ready.</p></div><div class="form-message is-success" role="status">Authentication successful. This is your starter dashboard page.</div><p class="auth-switch"><a href="/">Back to home</a></p><button class="button button-full" id="logout-button" type="button">Sign out</button></section></main><script>
+document.getElementById('logout-button').addEventListener('click', async () => { const r = await fetch('/api/auth/logout', {method:'POST'}); if (r.ok) location.href='/login'; });
+</script></body></html>
