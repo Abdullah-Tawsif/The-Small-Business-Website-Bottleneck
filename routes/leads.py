@@ -1,22 +1,29 @@
 
+"""API routes for customer lead submission and admin lead management."""
+
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel, ConfigDict
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from database.database import get_db
-from models.lead import Lead
-from models.package import Package
-from schemas.lead import LeadCreate, LeadResponse
+from middleware.auth_middleware import get_current_admin_user
+from models.user import User
+from schemas.lead import LeadCreate, LeadResponse, LeadStatus
+from services.lead_service import (
+    LeadNotFoundError,
+    LeadServiceError,
+    PackageUnavailableError,
+    create_lead as create_lead_service,
+    get_lead_by_id as get_lead_by_id_service,
+    list_leads as list_leads_service,
+    update_lead_status as update_lead_status_service,
+)
 
 
 logger = logging.getLogger(__name__)
-
-
-# --------------------------------------------------
-# 1. ROUTER CONFIGURATION
-# --------------------------------------------------
 
 router = APIRouter(
     prefix="/api/leads",
@@ -24,74 +31,198 @@ router = APIRouter(
 )
 
 
+class LeadStatusUpdate(BaseModel):
+    """Request body for updating a lead's pipeline status."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    status: LeadStatus
+
+
+def _database_error() -> HTTPException:
+    """Return a consistent database service-unavailable response."""
+
+    return HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail="Database temporarily unavailable.",
+    )
+
+
 # --------------------------------------------------
-# 2. CREATE CUSTOMER LEAD
+# 1. PUBLIC CUSTOMER LEAD SUBMISSION
 # --------------------------------------------------
 
 @router.post(
     "/",
     response_model=LeadResponse,
     status_code=status.HTTP_201_CREATED,
+    summary="Submit a customer inquiry",
 )
-def create_lead(
+def submit_lead(
     lead_data: LeadCreate,
     db: Session = Depends(get_db),
 ):
     """
-    Creates a new customer inquiry.
+    Public endpoint for customer inquiry submission.
 
-    Validates the selected package,
-    saves the lead and returns the result.
+    Business logic, package validation and pricing calculations
+    are delegated to the existing lead service.
     """
 
-    # Verify selected package
-    if lead_data.package_id is not None:
-
-        package = db.get(
-            Package,
-            lead_data.package_id,
-        )
-
-        if package is None or not package.is_active:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Selected package is unavailable.",
-            )
-
-    # Create lead object
-    new_lead = Lead(
-        **lead_data.model_dump(),
-        status="new",
-    )
-
-    # Save to PostgreSQL
     try:
-        db.add(new_lead)
-        db.commit()
-        db.refresh(new_lead)
-
-    except IntegrityError as exc:
-        db.rollback()
-
-        logger.warning(
-            "Lead creation failed due to invalid database data."
+        return create_lead_service(
+            db=db,
+            lead_data=lead_data,
         )
 
+    except PackageUnavailableError as exc:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Unable to save customer inquiry.",
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+    except LeadServiceError as exc:
+        logger.exception("Lead creation failed.")
+        raise _database_error() from exc
+
+    except SQLAlchemyError as exc:
+        logger.exception("Database error while creating lead.")
+        raise _database_error() from exc
+
+
+# --------------------------------------------------
+# 2. ADMIN LEAD LISTING
+# --------------------------------------------------
+
+@router.get(
+    "/",
+    response_model=list[LeadResponse],
+    summary="List customer leads",
+)
+def read_leads(
+    lead_status: LeadStatus | None = Query(
+        default=None,
+        alias="status",
+        description="Filter leads by pipeline status.",
+    ),
+    skip: int = Query(
+        default=0,
+        ge=0,
+        description="Number of leads to skip.",
+    ),
+    limit: int = Query(
+        default=100,
+        ge=1,
+        le=100,
+        description="Maximum number of leads to return.",
+    ),
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    """Retrieve leads with optional status filtering and pagination."""
+
+    try:
+        return list_leads_service(
+            db=db,
+            status=lead_status,
+            skip=skip,
+            limit=limit,
+        )
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
         ) from exc
 
     except SQLAlchemyError as exc:
-        db.rollback()
+        logger.exception("Database error while listing leads.")
+        raise _database_error() from exc
 
-        logger.exception(
-            "Database error while creating customer lead."
+
+# --------------------------------------------------
+# 3. ADMIN SINGLE LEAD RETRIEVAL
+# --------------------------------------------------
+
+@router.get(
+    "/{lead_id}",
+    response_model=LeadResponse,
+    summary="Get lead by ID",
+)
+def read_lead(
+    lead_id: int,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    """Retrieve an individual customer lead."""
+
+    try:
+        lead = get_lead_by_id_service(
+            db=db,
+            lead_id=lead_id,
         )
 
+        if lead is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Lead not found.",
+            )
+
+        return lead
+
+    except HTTPException:
+        raise
+
+    except SQLAlchemyError as exc:
+        logger.exception("Database error while retrieving lead.")
+        raise _database_error() from exc
+
+
+# --------------------------------------------------
+# 4. ADMIN LEAD STATUS UPDATE
+# --------------------------------------------------
+
+@router.patch(
+    "/{lead_id}/status",
+    response_model=LeadResponse,
+    summary="Update lead status",
+)
+def change_lead_status(
+    lead_id: int,
+    payload: LeadStatusUpdate,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    """
+    Update a lead's pipeline status.
+
+    Accepted statuses:
+    new, contacted, qualified, proposal_sent, won, lost.
+    """
+
+    try:
+        return update_lead_status_service(
+            db=db,
+            lead_id=lead_id,
+            new_status=payload.status,
+        )
+
+    except LeadNotFoundError as exc:
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database temporarily unavailable.",
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
         ) from exc
 
-    return new_lead
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
+    except LeadServiceError as exc:
+        logger.exception("Lead status update failed.")
+        raise _database_error() from exc
+
+    except SQLAlchemyError as exc:
+        logger.exception("Database error while updating lead status.")
+        raise _database_error() from exc
