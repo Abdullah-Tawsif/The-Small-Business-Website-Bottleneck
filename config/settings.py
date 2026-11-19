@@ -1,4 +1,6 @@
+
 from functools import lru_cache
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -7,8 +9,12 @@ class Settings(BaseSettings):
 
     app_name: str = "AgencyForge"
     environment: str = "development"
+
     jwt_secret_key: str = ""
+
     access_token_expire_minutes: int = 30
+    access_token_cookie_name: str = "access_token"
+
     rate_limit_requests: int = 60
     rate_limit_window_seconds: int = 60
     max_request_body_bytes: int = 1_000_000
