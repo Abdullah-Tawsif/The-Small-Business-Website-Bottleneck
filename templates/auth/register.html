@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Create account | AgencyForge</title>
+  <link rel="stylesheet" href="/static/css/base.css">
+</head>
+<body class="auth-page">
+  <header class="site-header">
+    <a class="brand" href="/">AgencyForge</a>
+    <nav><a href="/">Home</a><a href="/login">Log in</a></nav>
+  </header>
+  <main class="auth-wrap">
+    <section class="auth-card">
+      <p class="eyebrow">Get started</p>
+      <h1>Create your account</h1>
+      <p class="muted">Set up an account to start describing your website project.</p>
+      <!-- Backend integration: connect this form to the agreed registration endpoint. -->
+      <form action="/api/auth/register" method="post">
+        <label for="full_name">Full name</label>
+        <input id="full_name" name="full_name" type="text" autocomplete="name" placeholder="Your name" minlength="2" maxlength="100" required>
+        <label for="email">Email address</label>
+        <input id="email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required>
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="new-password" minlength="10" maxlength="128" placeholder="Create a password" required>
+        <button class="button button-full" type="submit">Create account</button>
+      </form>
+      <p class="form-foot">Already have an account? <a href="/login">Log in</a></p>
+    </section>
+  </main>
+</body>
+</html>
