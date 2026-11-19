@@ -1,8 +1,15 @@
+"""Database model for website development packages.
+
+The features column uses generic JSON for SQLite and PostgreSQL JSONB when
+running on PostgreSQL. This keeps the documented SQLite development setup
+working without giving up PostgreSQL's native JSONB storage.
+"""
 
 from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     CheckConstraint,
     DateTime,
@@ -18,14 +25,15 @@ from sqlalchemy.orm import Mapped, mapped_column
 from database.database import Base
 
 
+# SQLite stores this as JSON; PostgreSQL uses its native JSONB type.
+PACKAGE_FEATURES_TYPE = JSON().with_variant(JSONB(), "postgresql")
+
+
 class Package(Base):
-    """
-    Represents a website development service package.
-    """
+    """Represents a website development service package."""
 
     __tablename__ = "packages"
 
-    # Database constraints
     __table_args__ = (
         CheckConstraint(
             "min_price >= 0",
@@ -37,13 +45,11 @@ class Package(Base):
         ),
     )
 
-    # Unique package identifier
     id: Mapped[int] = mapped_column(
         Integer,
         primary_key=True,
     )
 
-    # Basic package information
     name: Mapped[str] = mapped_column(
         String(100),
         unique=True,
@@ -62,7 +68,6 @@ class Package(Base):
         nullable=False,
     )
 
-    # Pricing information
     min_price: Mapped[Decimal] = mapped_column(
         Numeric(12, 2),
         nullable=False,
@@ -79,14 +84,12 @@ class Package(Base):
         nullable=False,
     )
 
-    # Package features stored as PostgreSQL JSONB
     features: Mapped[list[str]] = mapped_column(
-        JSONB,
+        PACKAGE_FEATURES_TYPE,
         default=list,
         nullable=False,
     )
 
-    # Package availability
     is_active: Mapped[bool] = mapped_column(
         Boolean,
         default=True,
@@ -99,7 +102,6 @@ class Package(Base):
         nullable=False,
     )
 
-    # Automatic timestamps
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
