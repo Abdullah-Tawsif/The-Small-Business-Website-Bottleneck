@@ -1,50 +1,67 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>AgencyForge | Build the right website</title>
-  <link rel="stylesheet" href="/static/css/base.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Scopewise helps small businesses turn vague website ideas into clear, actionable project briefs.">
+  <title>Scopewise — Clearer website projects</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
-  <header class="site-header">
-    <a class="brand" href="/">AgencyForge</a>
-    <nav aria-label="Main navigation">
-      <a href="#how-it-works">How it works</a>
-      <a href="/login">Log in</a>
-      <a class="button button-small" href="/register">Get started</a>
-    </nav>
-  </header>
+  <div class="ambient ambient-one"></div>
+  <div class="ambient ambient-two"></div>
+  <nav class="site-nav" aria-label="Main navigation">
+    <a class="brand" href="index.html" aria-label="Scopewise home"><span class="brand-mark">S</span><span>scopewise</span></a>
+    <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false"><i data-lucide="menu"></i></button>
+    <div class="nav-links">
+      <a href="#features">Platform</a><a href="#how-it-works">How it works</a><a href="#for-teams">For teams</a>
+      <span class="nav-divider"></span><a class="nav-login" href="login.html">Sign in</a><a class="button button-small" href="register.html">Get started <i data-lucide="arrow-up-right"></i></a>
+    </div>
+  </nav>
 
   <main>
-    <section class="hero">
-      <p class="eyebrow">Web projects, made clearer</p>
-      <h1>Know what your business website really needs.</h1>
-      <p class="hero-copy">Tell us about your business and goals. Get a clearer starting point for your website project—without the technical guesswork.</p>
-      <div class="hero-actions">
-        <a class="button" href="/register">Start your project</a>
-        <a class="button button-secondary" href="#how-it-works">See how it works</a>
+    <section class="hero section-shell">
+      <div class="hero-copy">
+        <div class="eyebrow"><span class="eyebrow-dot"></span> Smart project discovery for modern teams</div>
+        <h1>Turn uncertain ideas into <em>clear direction.</em></h1>
+        <p class="hero-subtitle">Scopewise helps businesses explain what they need and helps agencies decide what to build next.</p>
+        <div class="hero-actions"><a class="button" href="register.html">Start scoping <i data-lucide="arrow-up-right"></i></a><a class="button button-ghost" href="#how-it-works">See how it works <i data-lucide="play-circle"></i></a></div>
       </div>
-      <p class="small-note">A guided first step. No commitment required.</p>
+      <div class="preview-wrap" aria-label="Scopewise project scoping preview">
+        <div class="preview-glow"></div>
+        <div class="preview-card">
+          <div class="preview-top"><div class="window-dots"><span></span><span></span><span></span></div><span class="preview-label">New project brief <i data-lucide="sparkles"></i></span><span class="preview-time">2 min</span></div>
+          <div class="preview-body">
+            <div class="progress-row"><span>Project clarity</span><strong>72%</strong></div><div class="progress-track"><span></span></div>
+            <h3>Tell us about your business</h3><p>We’ll turn your answers into a useful starting point for your next website conversation.</p>
+            <div class="preview-question"><span class="question-number">01</span><div><small>YOUR BUSINESS</small><strong>What should people understand first?</strong></div><i data-lucide="arrow-right"></i></div>
+            <div class="preview-tags"><span>Brand story</span><span>Online sales</span><span>Lead generation</span></div>
+          </div>
+          <div class="preview-bottom"><span><i data-lucide="lock-keyhole"></i> Private by design</span><button type="button">Continue <i data-lucide="arrow-right"></i></button></div>
+        </div>
+      </div>
     </section>
 
-    <section id="how-it-works" class="section">
-      <p class="eyebrow">A simpler process</p>
-      <h2>From idea to a clearer plan</h2>
-      <div class="steps">
-        <article class="card"><span class="step-number">01</span><h3>Share your goals</h3><p>Describe your business, audience, and what you want your website to achieve.</p></article>
-        <article class="card"><span class="step-number">02</span><h3>Understand your scope</h3><p>Organize the pages and features your project may need in plain language.</p></article>
-        <article class="card"><span class="step-number">03</span><h3>Take the next step</h3><p>Send your project details to the team for review and a more informed conversation.</p></article>
+    <section class="trust-strip section-shell" id="for-teams"><span class="strip-intro">Built for the moments<br><strong>before the build.</strong></span><div class="strip-item"><strong>01</strong><span>Better discovery</span></div><div class="strip-item"><strong>02</strong><span>Faster decisions</span></div><div class="strip-item"><strong>03</strong><span>Stronger outcomes</span></div><div class="strip-item strip-result"><i data-lucide="trending-up"></i><span><strong>Less back-and-forth.</strong><br>More forward motion.</span></div></section>
+
+    <section class="content-section section-shell" id="features">
+      <div class="section-heading"><div><span class="section-kicker">A better starting point</span><h2>Less guesswork.<br><span>More momentum.</span></h2></div><p>Good projects begin with shared understanding. Scopewise gives everyone a clearer place to start.</p></div>
+      <div class="bento-grid">
+        <article class="feature-card feature-large"><div class="icon-tile"><i data-lucide="message-circle-more"></i></div><span class="card-index">01 / DISCOVER</span><h3>Ask the right questions, earlier.</h3><p>Guide clients through the details that matter, without making them speak fluent agency.</p><a href="#how-it-works" class="card-link">Explore discovery <i data-lucide="arrow-up-right"></i></a><div class="mini-chat"><div><span class="avatar avatar-green">M</span><span>What would success look like?</span></div><div class="chat-reply"><span class="avatar avatar-dark">S</span><span>A clearer path to the right customers.</span></div></div></article>
+        <article class="feature-card feature-tall"><div class="icon-tile icon-sand"><i data-lucide="layers-3"></i></div><span class="card-index">02 / ALIGN</span><h3>See the full picture.</h3><p>Bring goals, priorities and constraints into one simple, shared brief.</p><div class="stack-visual"><span>Business goals <i data-lucide="check"></i></span><span>Audience & needs <i data-lucide="check"></i></span><span>Project priorities <i data-lucide="check"></i></span></div></article>
+        <article class="feature-card feature-wide"><div class="feature-wide-copy"><div class="icon-tile icon-blue"><i data-lucide="chart-no-axes-combined"></i></div><span class="card-index">03 / DECIDE</span><h3>Know what’s worth pursuing.</h3><p>Turn a first conversation into an actionable recommendation — with less manual effort and more confidence.</p></div><div class="score-visual"><span class="score-circle">86<small>/100</small></span><span>Project fit<br><strong>Strong match</strong></span></div></article>
       </div>
     </section>
 
-    <section class="closing-cta">
-      <h2>Your website project deserves a clear starting point.</h2>
-      <p>Start with what you know. We’ll help make the next steps easier to understand.</p>
-      <a class="button" href="/register">Create your account</a>
-    </section>
+    <section class="steps-section section-shell" id="how-it-works"><div class="section-heading centered"><span class="section-kicker">Simple by design</span><h2>From first thought<br>to <span>next step.</span></h2><p>A focused workflow that keeps the conversation moving.</p></div><div class="steps-grid"><div class="step"><span class="step-number">01</span><i data-lucide="notebook-pen"></i><h3>Share the context</h3><p>Answer a few thoughtful questions about the business, audience and ambition.</p></div><div class="step-line"></div><div class="step"><span class="step-number">02</span><i data-lucide="wand-sparkles"></i><h3>Make sense of it</h3><p>Get a structured view of what matters, what’s missing and where to focus.</p></div><div class="step-line"></div><div class="step"><span class="step-number">03</span><i data-lucide="route"></i><h3>Move forward</h3><p>Use a shared brief to start better conversations and make confident decisions.</p></div></div></section>
+
+    <section class="final-cta section-shell"><div class="cta-inner"><span class="section-kicker">Ready when you are</span><h2>Make the next conversation<br><span>the right one.</span></h2><p>Start with clarity. Build with confidence.</p><a class="button" href="register.html">Create your free account <i data-lucide="arrow-up-right"></i></a></div></section>
   </main>
-
-  <footer class="site-footer"><span>© 2026 AgencyForge</span><span>Clearer projects. Better conversations.</span></footer>
+  <footer class="site-footer section-shell"><a class="brand" href="index.html"><span class="brand-mark">S</span><span>scopewise</span></a><span>© 2026 Scopewise. Built for better beginnings.</span><div><a href="#features">Platform</a><a href="#how-it-works">How it works</a><a href="login.html">Sign in</a></div></footer>
+  <script src="assets/js/main.js"></script>
 </body>
 </html>

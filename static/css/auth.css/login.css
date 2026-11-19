@@ -1,0 +1,5 @@
+@import url('../base.css');
+
+.auth-page .auth-card {
+  min-height: 560px;
+}

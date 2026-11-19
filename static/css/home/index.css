@@ -1,0 +1,11 @@
+@import url('../base.css');
+
+body:not(.auth-page) {
+  min-height: 100vh;
+}
+
+body:not(.auth-page) .site-nav,
+body:not(.auth-page) main,
+body:not(.auth-page) .site-footer {
+  position: relative;
+}
