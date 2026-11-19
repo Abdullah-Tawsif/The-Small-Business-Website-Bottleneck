@@ -1,33 +1,8 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Create account | AgencyForge</title>
-  <link rel="stylesheet" href="/static/css/base.css">
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="description" content="Create your free Scopewise account."><title>Create account — Scopewise</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="assets/css/style.css"><script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body class="auth-page">
-  <header class="site-header">
-    <a class="brand" href="/">AgencyForge</a>
-    <nav><a href="/">Home</a><a href="/login">Log in</a></nav>
-  </header>
-  <main class="auth-wrap">
-    <section class="auth-card">
-      <p class="eyebrow">Get started</p>
-      <h1>Create your account</h1>
-      <p class="muted">Set up an account to start describing your website project.</p>
-      <!-- Backend integration: connect this form to the agreed registration endpoint. -->
-      <form action="/api/auth/register" method="post">
-        <label for="full_name">Full name</label>
-        <input id="full_name" name="full_name" type="text" autocomplete="name" placeholder="Your name" minlength="2" maxlength="100" required>
-        <label for="email">Email address</label>
-        <input id="email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required>
-        <label for="password">Password</label>
-        <input id="password" name="password" type="password" autocomplete="new-password" minlength="10" maxlength="128" placeholder="Create a password" required>
-        <button class="button button-full" type="submit">Create account</button>
-      </form>
-      <p class="form-foot">Already have an account? <a href="/login">Log in</a></p>
-    </section>
-  </main>
-</body>
+<body class="auth-page"><div class="ambient ambient-one"></div><div class="ambient ambient-two"></div><a class="back-home" href="index.html"><i data-lucide="arrow-left"></i> Back to home</a><main class="auth-shell"><div class="auth-card register-card"><a class="brand auth-brand" href="index.html"><span class="brand-mark">S</span><span>scopewise</span></a><div class="auth-heading"><span class="section-kicker">Start with clarity</span><h1>Create your <span>account.</span></h1><p>Set up your workspace and make the next step easier.</p></div><form class="auth-form" data-form="register" novalidate><label>Full name<input type="text" name="name" placeholder="Alex Morgan" autocomplete="name" required><span class="field-error"></span></label><label>Email address<input type="email" name="email" placeholder="you@company.com" autocomplete="email" required><span class="field-error"></span></label><label>Password<div class="password-field"><input type="password" name="password" placeholder="Create a password" autocomplete="new-password" required minlength="8"><button type="button" class="password-toggle" aria-label="Show password"><i data-lucide="eye"></i></button></div><span class="field-hint">Use at least 8 characters.</span><span class="field-error"></span></label><label>Confirm password<div class="password-field"><input type="password" name="confirm" placeholder="Repeat your password" autocomplete="new-password" required><button type="button" class="password-toggle" aria-label="Show password"><i data-lucide="eye"></i></button></div><span class="match-message"></span><span class="field-error"></span></label><button class="button button-full" type="submit">Create account <i data-lucide="arrow-right"></i></button><div class="form-message" role="status"></div></form><p class="auth-switch">Already have an account? <a href="login.html">Sign in</a></p></div></main><script src="assets/js/main.js"></script></body>
 </html>
