@@ -88,8 +88,11 @@ project-root/
 │
 ├── middleware/
 │   ├── auth_middleware.py
+│   ├── csrf_protection.py
 │   ├── error_handlers.py
-│   └── rate_limiter.py
+│   ├── rate_limiter.py
+│   ├── request_size_limit.py
+│   └── security_headers.py
 │
 ├── models/
 │   ├── user.py
@@ -119,7 +122,9 @@ project-root/
 │   ├── analytics_service.py
 │   └── ai_scoping_service.py
 │
-├── scripts/
+├── migrations/
+│   ├── env.py
+│   └── versions/
 │
 ├── static/
 │
@@ -128,10 +133,12 @@ project-root/
 ├── tests/
 │
 ├── utils/
+│   ├── client_identity.py
 │   ├── security.py
 │   └── validators.py
 │
 ├── create_admin.py
+├── seed_packages.py
 ├── main.py
 ├── README.md
 └── ARCHITECTURE.md
@@ -584,7 +591,7 @@ Unexpected server errors are logged internally without exposing exception detail
 
 Implements fixed-window rate limiting using client IP addresses.
 
-When `RATE_LIMIT_REDIS_URL` is configured, an atomic Redis Lua operation shares fixed-window counts across workers. Production requires the shared URL and fails closed when the service is unavailable. Development can omit Redis and use the in-process limiter. Client IPs come from the socket peer; forwarded headers are not trusted.
+When `RATE_LIMIT_REDIS_URL` is configured, an atomic Redis Lua operation shares fixed-window counts across workers. Production requires the shared URL and fails closed when the service is unavailable. Development can omit Redis and use the in-process limiter. Client IPs are resolved by `utils/client_identity.py`; forwarded headers are honored only when the socket peer belongs to a configured `TRUSTED_PROXY_CIDRS` network.
 
 `middleware/security_headers.py` adds content-type, framing, referrer, feature-policy, and opener headers. HSTS is added when `ENVIRONMENT=production`; HTTPS termination must be provided by the deployment.
 
@@ -592,8 +599,9 @@ When `RATE_LIMIT_REDIS_URL` is configured, an atomic Redis Lua operation shares 
 a matching `csrf_token` cookie and `X-CSRF-Token` header for state-changing
 requests authenticated by the session cookie. Configure trusted proxy handling
 so the ASGI request scheme reflects the public HTTPS origin. A Content Security
-Policy is deferred while templates still use inline scripts and styles and
-load Google Fonts and Lucide externally.
+Policy is deferred while templates still use inline scripts and styles. Icons
+are rendered locally by `static/js/icons.js`; no icon CDN or remote web-font
+dependency is used.
 
 ---
 
@@ -639,6 +647,7 @@ Page routes currently include:
 - `/inquiry`
 - `/packages`
 - `/dashboard`
+- `/user`
 - `/admin` (active administrators only)
 
 The frontend communicates with backend API endpoints for authentication, package selection, pricing, inquiries and AI scoping.

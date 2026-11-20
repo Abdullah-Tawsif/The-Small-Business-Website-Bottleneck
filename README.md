@@ -57,16 +57,24 @@ python -m venv .venv
 Linux / macOS:
 
 ```bash
+cd The-Small-Business-Website-Bottleneck
+
 python3 -m venv .venv
 source .venv/bin/activate
-```
 
-### 3. Install dependencies
-
-```bash
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
+
+Activate `.venv` whenever opening a new terminal. If FastAPI or Uvicorn is
+missing, confirm that the virtual environment is active and install
+`requirements.txt` into that environment. Do not install Uvicorn with the OS
+package manager.
+
+### 3. Install dependencies
+
+The Linux commands above install the dependencies into the active virtual
+environment.
 
 ### 4. Configure environment variables
 
@@ -91,6 +99,8 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 ```
 
 Replace the placeholder value of `JWT_SECRET_KEY` in `.env`.
+The replacement must be a fresh, randomly generated secret of at least 32
+bytes. Never commit the resulting `.env` file or a real secret.
 
 Never commit your actual `.env` file or production secrets.
 
@@ -153,7 +163,8 @@ It will not overwrite an existing account.
 ### 8. Start the application
 
 ```bash
-uvicorn main:app --reload
+source .venv/bin/activate
+python -m uvicorn main:app --reload
 ```
 
 Open:
@@ -163,6 +174,10 @@ http://127.0.0.1:8000
 API documentation:
 
 http://127.0.0.1:8000/docs
+
+Use `python -m uvicorn`, not a system-installed `uvicorn` command. Migration
+and administrator setup are one-time setup tasks: do not rerun them on every
+application start.
 
 ## Application Routes
 
@@ -245,9 +260,11 @@ Administrator endpoints require an authenticated, active administrator account.
 │   └── database.py
 ├── middleware/
 │   ├── auth_middleware.py
+│   ├── csrf_protection.py
 │   ├── error_handlers.py
 │   ├── rate_limiter.py
-│   └── request_size_limit.py
+│   ├── request_size_limit.py
+│   └── security_headers.py
 ├── models/
 ├── routes/
 │   ├── admin.py
@@ -257,13 +274,19 @@ Administrator endpoints require an authenticated, active administrator account.
 │   ├── public.py
 │   └── scoping.py
 ├── schemas/
-├── scripts/
 ├── services/
 ├── static/
+├── migrations/
+│   ├── env.py
+│   └── versions/
 ├── templates/
 ├── tests/
 ├── utils/
+│   ├── client_identity.py
+│   ├── security.py
+│   └── validators.py
 ├── create_admin.py
+├── seed_packages.py
 └── main.py
 ```
 

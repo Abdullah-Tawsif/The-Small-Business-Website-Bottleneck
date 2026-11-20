@@ -10,3 +10,6 @@ venv/
 htmlcov/
 *.log
 .DS_Store
+/agencyforge-dev.sqlite
+/agencyforge-dev.sqlite-*
+/agencyforge-dev.sqlite.*
