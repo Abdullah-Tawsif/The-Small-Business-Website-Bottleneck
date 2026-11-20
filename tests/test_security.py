@@ -3,6 +3,7 @@ import pytest
 from utils.security import (
     InvalidTokenError,
     PasswordError,
+    SecurityError,
     create_access_token,
     decode_access_token,
     hash_password,
@@ -51,5 +52,17 @@ def test_rejects_tampered_token():
 
 
 def test_rejects_invalid_role():
-    with pytest.raises(Exception):
+    with pytest.raises(SecurityError):
         create_access_token(user_id=7, role="superuser")
+
+
+@pytest.mark.parametrize("lifetime", [0, -1, 1441, 1.5, True])
+def test_rejects_invalid_explicit_token_lifetime(lifetime):
+    with pytest.raises(SecurityError, match="Token lifetime"):
+        create_access_token(user_id=7, role="staff", expires_minutes=lifetime)
+
+
+@pytest.mark.parametrize("user_id", [0, -1, 1.5, True, "7"])
+def test_rejects_invalid_user_identifiers(user_id):
+    with pytest.raises(SecurityError, match="Invalid user ID"):
+        create_access_token(user_id=user_id, role="staff")

@@ -16,6 +16,7 @@ class ScopingRequest(BaseModel):
     )
 
     session_id: UUID | None = None
+    session_token: str | None = Field(default=None, min_length=32, max_length=128)
 
     message: str = Field(
         min_length=3,
@@ -94,6 +95,7 @@ class ScopingResponse(BaseModel):
     """Structured AI-generated website scope."""
 
     session_id: UUID
+    session_token: str | None = None
 
     scope_summary: str
 

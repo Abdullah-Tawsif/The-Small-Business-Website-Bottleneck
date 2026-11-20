@@ -4,11 +4,15 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import logging
 import os
 import re
+import secrets
 import time
 import urllib.request
+from datetime import UTC, datetime, timedelta
+import hmac
 from typing import Any
 
 from sqlalchemy import select
@@ -23,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 
 SYSTEM_PROMPT = """
-You are Scopewise, an expert website project discovery assistant.
+You are AgencyForge, an expert website project discovery assistant.
 
 Your job is to understand a customer's business and recommend
 a practical website project scope.
@@ -524,6 +528,9 @@ def generate_external_ai_scope(
 def generate_scope(
     db: Session,
     payload: ScopingRequest,
+    *,
+    owner_user_id: int | None = None,
+    guest_capability: str | None = None,
 ) -> ScopingResponse:
     """
     Generate a customer project scope.
@@ -541,23 +548,33 @@ def generate_scope(
     started_at = time.monotonic()
 
     # Retrieve an existing conversation.
-    if payload.session_id:
+    guest_capability = guest_capability or payload.session_token
+    issued_guest_capability = None
+    now = datetime.now(UTC)
+    session = authorize_session_access(
+        db,
+        payload,
+        owner_user_id=owner_user_id,
+        guest_capability=guest_capability,
+    )
 
-        session = db.get(
-            AISession,
-            payload.session_id,
+    if session is None:
+
+        if guest_capability:
+            raise ValueError("Start a new scoping session before continuing.")
+        issued_guest_capability = (
+            None if owner_user_id is not None else secrets.token_urlsafe(32)
         )
-
-        if session is None:
-            raise ValueError(
-                "Scoping session not found. Please start a new session."
-            )
-
-    else:
-
         session = AISession(
             conversation_history=[],
             status="active",
+            owner_user_id=owner_user_id,
+            guest_capability_hash=(
+                hashlib.sha256(issued_guest_capability.encode("utf-8")).hexdigest()
+                if issued_guest_capability
+                else None
+            ),
+            expires_at=now + timedelta(days=30 if owner_user_id is not None else 1),
         )
 
         db.add(session)
@@ -574,7 +591,7 @@ def generate_scope(
     # Store the latest customer input.
     user_content = payload.model_dump(
         mode="json",
-        exclude={"session_id"},
+        exclude={"session_id", "session_token"},
     )
 
     history.append({
@@ -657,5 +674,39 @@ def generate_scope(
     # Return the API response.
     return ScopingResponse(
         session_id=session.id,
+        session_token=issued_guest_capability,
         **proposal,
     )
+
+
+def authorize_session_access(
+    db: Session,
+    payload: ScopingRequest,
+    *,
+    owner_user_id: int | None = None,
+    guest_capability: str | None = None,
+) -> AISession | None:
+    """Validate ownership/capability and expiry before charging an AI budget."""
+    if payload.session_id is None:
+        if guest_capability:
+            raise ValueError("Start a new scoping session before continuing.")
+        return None
+    session = db.get(AISession, payload.session_id)
+    if session is None:
+        raise ValueError("Scoping session is unavailable. Please start a new session.")
+    now = datetime.now(UTC)
+    expiry = session.expires_at
+    if expiry is not None and (
+        expiry.replace(tzinfo=UTC) if expiry.tzinfo is None else expiry.astimezone(UTC)
+    ) <= now:
+        raise ValueError("Scoping session is unavailable. Please start a new session.")
+    if session.owner_user_id is not None:
+        if owner_user_id != session.owner_user_id:
+            raise ValueError("Scoping session is unavailable. Please start a new session.")
+    else:
+        if not session.guest_capability_hash or not guest_capability:
+            raise ValueError("Scoping session is unavailable. Please start a new session.")
+        supplied_hash = hashlib.sha256(guest_capability.encode("utf-8")).hexdigest()
+        if not hmac.compare_digest(session.guest_capability_hash, supplied_hash):
+            raise ValueError("Scoping session is unavailable. Please start a new session.")
+    return session

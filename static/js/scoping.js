@@ -77,6 +77,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // =================================================
 
     let sessionId = null;
+    let sessionToken = null;
 
     let packages = [];
     let selectedPackageId = null;
@@ -295,6 +296,8 @@ document.addEventListener("DOMContentLoaded", () => {
         return {
             session_id: sessionId,
 
+            session_token: sessionToken,
+
             message: message,
 
             business_name: getValue(el.businessName) || null,
@@ -387,6 +390,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function displayScope(data) {
         // Save session ID for all future AI requests.
         sessionId = data.session_id;
+        sessionToken = data.session_token || null;
 
         el.sessionInput.value = sessionId;
 

@@ -1,20 +1,68 @@
 
 import uuid
+from pathlib import Path
 
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import select
+from alembic.script import ScriptDirectory
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import sessionmaker
 
+import database.database as database_module
+from config.settings import get_settings
+from database.database import Base, get_db
 from main import app
-from database.database import SessionLocal
 from models.lead import Lead
+from asgi_client import SyncASGIClient
 
 
 @pytest.fixture
-def client():
-    """Create a test HTTP client."""
-    with TestClient(app) as test_client:
-        yield test_client
+def client(tmp_path, monkeypatch):
+    """Run lead API tests with a database confined to pytest's temp folder."""
+    test_engine = create_engine(
+        f"sqlite:///{tmp_path / 'lead-api-tests.sqlite'}",
+        connect_args={"check_same_thread": False},
+    )
+    test_sessions = sessionmaker(
+        bind=test_engine,
+        autoflush=False,
+        expire_on_commit=False,
+    )
+    Base.metadata.create_all(test_engine)
+    with test_engine.begin() as connection:
+        connection.exec_driver_sql(
+            "CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL)"
+        )
+        current_head = ScriptDirectory(
+            str(Path(__file__).resolve().parents[1] / "migrations")
+        ).get_current_head()
+        connection.execute(
+            text("INSERT INTO alembic_version (version_num) VALUES (:version)"),
+            {"version": current_head},
+        )
+    monkeypatch.setattr(database_module, "engine", test_engine)
+    monkeypatch.setenv(
+        "JWT_SECRET_KEY",
+        "isolated-lead-api-tests-secret-at-least-32-bytes",
+    )
+    monkeypatch.setenv("ENVIRONMENT", "development")
+    monkeypatch.setenv("RATE_LIMIT_REDIS_URL", "")
+    get_settings.cache_clear()
+
+    def override_get_db():
+        with test_sessions() as db:
+            yield db
+
+    previous_overrides = app.dependency_overrides.copy()
+    app.dependency_overrides[get_db] = override_get_db
+
+    try:
+        with SyncASGIClient(app) as test_client:
+            yield test_client, test_sessions
+    finally:
+        app.dependency_overrides.clear()
+        app.dependency_overrides.update(previous_overrides)
+        get_settings.cache_clear()
+        test_engine.dispose()
 
 
 def valid_lead_data():
@@ -54,11 +102,12 @@ def valid_lead_data():
 
 def test_create_lead_and_save_to_database(client):
 
+    test_client, test_sessions = client
     data = valid_lead_data()
     lead_id = None
 
     try:
-        response = client.post(
+        response = test_client.post(
             "/api/leads/",
             json=data
         )
@@ -73,8 +122,8 @@ def test_create_lead_and_save_to_database(client):
 
         lead_id = result["id"]
 
-        # Verify PostgreSQL persistence
-        with SessionLocal() as db:
+        # Verify persistence in the disposable SQLite database.
+        with test_sessions() as db:
 
             saved_lead = db.get(Lead, lead_id)
 
@@ -85,7 +134,7 @@ def test_create_lead_and_save_to_database(client):
     finally:
         # Remove test record after verification
         if lead_id is not None:
-            with SessionLocal() as db:
+            with test_sessions() as db:
                 saved_lead = db.get(Lead, lead_id)
 
                 if saved_lead is not None:
@@ -99,10 +148,11 @@ def test_create_lead_and_save_to_database(client):
 
 def test_reject_invalid_email(client):
 
+    test_client, _ = client
     data = valid_lead_data()
     data["email"] = "not-an-email"
 
-    response = client.post(
+    response = test_client.post(
         "/api/leads/",
         json=data
     )
@@ -116,12 +166,13 @@ def test_reject_invalid_email(client):
 
 def test_reject_invalid_budget(client):
 
+    test_client, _ = client
     data = valid_lead_data()
 
     data["budget_min"] = "50000"
     data["budget_max"] = "20000"
 
-    response = client.post(
+    response = test_client.post(
         "/api/leads/",
         json=data
     )
@@ -135,11 +186,12 @@ def test_reject_invalid_budget(client):
 
 def test_reject_nonexistent_package(client):
 
+    test_client, _ = client
     data = valid_lead_data()
 
     data["package_id"] = 2147483647
 
-    response = client.post(
+    response = test_client.post(
         "/api/leads/",
         json=data
     )

@@ -1,5 +1,7 @@
-@import url('../base.css');
-
 .auth-page .auth-card {
   min-height: 560px;
+}
+
+.auth-page .auth-heading h1 {
+  font-family: Manrope, sans-serif;
 }

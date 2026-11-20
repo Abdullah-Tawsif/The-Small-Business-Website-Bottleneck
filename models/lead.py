@@ -18,7 +18,6 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from database.database import Base
 
-
 # SQLite uses JSON; PostgreSQL uses native JSONB.
 LEAD_JSON_TYPE = JSON().with_variant(JSONB(), "postgresql")
 
@@ -49,6 +48,7 @@ class Lead(Base):
             "'proposal_sent', 'won', 'lost')",
             name="ck_leads_status",
         ),
+        Index("ix_leads_created_at_id", "created_at", "id"),
         Index("ix_leads_status_created_at", "status", "created_at"),
         Index("ix_leads_email", "email"),
     )

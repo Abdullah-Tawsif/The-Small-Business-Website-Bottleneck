@@ -1,21 +1,252 @@
 <!doctype html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Admin — Scopewise</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="/static/css/base.css"><link rel="stylesheet" href="/static/css/admin/admin.css"><script src="https://unpkg.com/lucide@latest"></script></head>
-<body class="app-page"><div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
-<nav class="site-nav app-nav"><a class="brand" href="/"><span class="brand-mark">S</span><span>scopewise</span></a><div class="nav-links"><span class="nav-role-badge">Admin</span><a href="/dashboard">Dashboard</a><a href="/" class="muted-link">Back to home</a><a class="nav-login" href="#" id="logout-button">Sign out</a></div></nav>
-<main class="app-shell">
-<section class="app-header"><div class="app-header-copy"><span class="section-kicker">Control center</span><h1>Admin <span>overview.</span></h1><p>Monitor accounts, leads, and project activity across your workspace.</p></div><div class="app-header-stats"><div class="stat-chip"><small>Total users</small><strong id="stat-users">—</strong></div><div class="stat-chip"><small>Active leads</small><strong id="stat-leads">—</strong></div><div class="stat-chip"><small>Open sessions</small><strong id="stat-sessions">—</strong></div></div></section>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Admin — AgencyForge</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/admin/admin.css"><link rel="stylesheet" href="/static/css/agencyforge-theme.css">
+    <script src="/static/js/icons.js"></script>
+</head>
+<body class="app-page">
+    <div class="ambient ambient-one"></div>
+    <div class="ambient ambient-two"></div>
+    <nav class="site-nav app-nav">
+        <a class="brand" href="/"><span class="brand-mark">A</span><span>AgencyForge</span></a>
+        <button class="menu-toggle" type="button" id="admin-menu-toggle" aria-label="Open navigation" aria-expanded="false" aria-controls="admin-nav-links">
+            <i data-lucide="menu"></i>
+        </button>
+        <div class="nav-links" id="admin-nav-links">
+            <span class="nav-role-badge">Admin</span>
+            <a href="/dashboard">Dashboard</a>
+            <a href="/" class="muted-link">Back to home</a>
+            <button class="nav-login" type="button" id="logout-button">Sign out</button>
+        </div>
+    </nav>
 
-<section class="app-panel"><div class="panel-top"><h2>Recent accounts</h2><span class="panel-hint">Latest registered users</span></div><div class="panel-table"><div class="table-head"><span>Name</span><span>Email</span><span>Role</span><span>Status</span><span>Joined</span></div><div id="users-body" class="table-body"><div class="table-empty">Loading accounts…</div></div></div></section>
+    <main class="app-shell">
+        <section class="app-header">
+            <div class="app-header-copy">
+                <span class="section-kicker">Control center</span>
+                <h1>Admin <span>overview.</span></h1>
+                <p>Review registered accounts and recent customer inquiries.</p>
+            </div>
+            <div class="app-header-stats">
+                <div class="stat-chip"><small>Total users</small><strong id="stat-users">—</strong></div>
+                <div class="stat-chip"><small>Leads shown</small><strong id="stat-leads">—</strong></div>
+            </div>
+        </section>
 
-<section class="app-grid">
-<article class="app-panel panel-tall"><div class="panel-top"><h2>Leads pipeline</h2><span class="panel-hint">All inbound inquiries</span></div><div class="panel-table"><div class="table-head"><span>Contact</span><span>Package</span><span>Stage</span></div><div id="leads-body" class="table-body"><div class="table-empty">Loading leads…</div></div></div></article>
-<article class="app-panel panel-tall"><div class="panel-top"><h2>Quick actions</h2></div><div class="action-list"><a class="action-row" href="/user"><i data-lucide="user"></i><div><strong>View user panel</strong><span>See the standard workspace</span></div><i data-lucide="arrow-up-right" class="action-go"></i></a><a class="action-row" href="/dashboard"><i data-lucide="layout-dashboard"></i><div><strong>Open dashboard</strong><span>Your personal workspace</span></div><i data-lucide="arrow-up-right" class="action-go"></i></a><a class="action-row" href="/"><i data-lucide="home"></i><div><strong>Back to home</strong><span>Marketing landing page</span></div><i data-lucide="arrow-up-right" class="action-go"></i></a></div></article>
-</section>
-</main>
-<footer class="site-footer section-shell"><a class="brand" href="/"><span class="brand-mark">S</span><span>scopewise</span></a><span>© 2026 Scopewise. Built for better beginnings.</span><div><a href="/dashboard">Dashboard</a><a href="/">Home</a></div></footer>
-<script>
-async function loadUsers(){const r=await fetch('/api/admin/users',{credentials:'same-origin'});if(!r.ok){document.getElementById('users-body').innerHTML='<div class="table-empty">Unable to load accounts.</div>';return;}const rows=await r.json();const body=document.getElementById('users-body');if(!rows.length){body.innerHTML='<div class="table-empty">No accounts yet.</div>';return;}body.innerHTML=rows.map(u=>`<div class="table-row"><span>${u.full_name}</span><span class="cell-muted">${u.email}</span><span><span class="tag tag-${u.role==='admin'?'admin':'staff'}">${u.role}</span></span><span>${u.is_active?'<span class="tag tag-active">Active</span>':'<span class="tag tag-inactive">Inactive</span>'}</span><span class="cell-muted">${u.created_at}</span></div>`).join('');document.getElementById('stat-users').textContent=rows.length;}
-async function loadLeads(){const r=await fetch('/api/admin/leads',{credentials:'same-origin'});if(!r.ok){document.getElementById('leads-body').innerHTML='<div class="table-empty">Unable to load leads.</div>';return;}const rows=await r.json();const body=document.getElementById('leads-body');if(!rows.length){body.innerHTML='<div class="table-empty">No leads yet.</div>';return;}body.innerHTML=rows.map(l=>`<div class="table-row"><span>${l.contact_name||l.email}</span><span class="cell-muted">${l.package||'—'}</span><span><span class="tag tag-stage">${l.stage||'new'}</span></span></div>`).join('');document.getElementById('stat-leads').textContent=rows.length;}
-document.getElementById('logout-button').addEventListener('click',async(e)=>{e.preventDefault();const r=await fetch('/api/auth/logout',{method:'POST',credentials:'same-origin'});if(r.ok)location.href='/login';});
-document.addEventListener('DOMContentLoaded',()=>{if(window.lucide)window.lucide.createIcons();loadUsers();loadLeads();});
-</script></body></html>
+        <section class="app-panel">
+            <div class="panel-top"><h2>Recent accounts</h2><span class="panel-hint">Latest registered users</span></div>
+            <div class="panel-table">
+                <div class="table-head"><span>Name</span><span>Email</span><span>Role</span><span>Status</span><span>Joined</span><span>Account</span></div>
+                <div id="users-body" class="table-body" aria-live="polite" aria-busy="true"><div class="table-empty">Loading accounts…</div></div>
+            </div>
+            <div class="admin-users-controls">
+                <span id="users-page-status" aria-live="polite"></span>
+                <button id="users-previous" class="button button-small button-ghost" type="button" disabled>Previous</button>
+                <button id="users-next" class="button button-small button-ghost" type="button" disabled>Next</button>
+            </div>
+            <p id="users-message" class="admin-feedback" role="status" aria-live="polite"></p>
+        </section>
+
+        <section class="app-grid">
+            <article class="app-panel panel-tall">
+                <div class="panel-top"><h2>Recent inquiries</h2><span class="panel-hint">Latest inbound inquiries</span></div>
+                <div class="panel-table">
+                    <div class="table-head"><span>Contact</span><span>Package</span><span>Status</span></div>
+                    <div id="leads-body" class="table-body" aria-live="polite" aria-busy="true"><div class="table-empty">Loading leads…</div></div>
+                </div>
+            </article>
+            <article class="app-panel panel-tall">
+                <div class="panel-top"><h2>Quick actions</h2></div>
+                <div class="action-list">
+                    <a class="action-row" href="/dashboard"><i data-lucide="layout-dashboard"></i><div><strong>Open dashboard</strong><span>Your personal workspace</span></div><i data-lucide="arrow-up-right" class="action-go"></i></a>
+                    <a class="action-row" href="/"><i data-lucide="home"></i><div><strong>Back to home</strong><span>Marketing landing page</span></div><i data-lucide="arrow-up-right" class="action-go"></i></a>
+                </div>
+            </article>
+        </section>
+    </main>
+
+    <footer class="site-footer section-shell">
+        <a class="brand" href="/"><span class="brand-mark">A</span><span>AgencyForge</span></a>
+        <span>© 2026 AgencyForge. Built for better beginnings.</span>
+        <div><a href="/dashboard">Dashboard</a><a href="/">Home</a></div>
+    </footer>
+
+    <script>
+        function escapeHtml(value) {
+            return String(value ?? "").replace(/[&<>"']/g, (character) => ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#39;",
+            })[character]);
+        }
+
+        function csrfToken() {
+            const prefix = "csrf_token=";
+            const item = document.cookie.split(";").map((value) => value.trim()).find((value) => value.startsWith(prefix));
+            return item ? decodeURIComponent(item.slice(prefix.length)) : "";
+        }
+
+        const currentAdminId = {{ user.id }};
+        let usersPage = 1;
+        let usersTotalPages = 0;
+
+        const adminMenuToggle = document.getElementById("admin-menu-toggle");
+        const adminNavigation = document.getElementById("admin-nav-links");
+
+        adminMenuToggle.addEventListener("click", () => {
+            const isOpen = adminMenuToggle.getAttribute("aria-expanded") !== "true";
+            adminMenuToggle.setAttribute("aria-expanded", String(isOpen));
+            adminMenuToggle.setAttribute("aria-label", isOpen ? "Close navigation" : "Open navigation");
+            adminNavigation.classList.toggle("is-open", isOpen);
+        });
+
+        adminNavigation.addEventListener("click", (event) => {
+            if (!event.target.closest("a, button")) return;
+            adminMenuToggle.setAttribute("aria-expanded", "false");
+            adminMenuToggle.setAttribute("aria-label", "Open navigation");
+            adminNavigation.classList.remove("is-open");
+        });
+
+        document.addEventListener("keydown", (event) => {
+            if (event.key !== "Escape" || adminMenuToggle.getAttribute("aria-expanded") !== "true") return;
+            adminMenuToggle.setAttribute("aria-expanded", "false");
+            adminMenuToggle.setAttribute("aria-label", "Open navigation");
+            adminNavigation.classList.remove("is-open");
+            adminMenuToggle.focus();
+        });
+
+        async function loadUsers() {
+            const body = document.getElementById("users-body");
+            body.setAttribute("aria-busy", "true");
+            try {
+                const response = await fetch(`/api/admin/users?page=${usersPage}&page_size=20`, {credentials: "same-origin"});
+                if (!response.ok) throw new Error("Unable to load accounts.");
+
+                const result = await response.json();
+                const users = Array.isArray(result.items) ? result.items : [];
+                usersTotalPages = Number(result.total_pages) || 0;
+                body.setAttribute("aria-busy", "false");
+                if (!users.length) {
+                    body.innerHTML = '<div class="table-empty">No accounts yet.</div>';
+                } else {
+                    body.innerHTML = users.map((user) => `
+                        <div class="table-row">
+                            <span data-label="Name">${escapeHtml(user.full_name)}</span>
+                            <span class="cell-muted" data-label="Email">${escapeHtml(user.email)}</span>
+                            <span data-label="Role"><span class="tag tag-${escapeHtml(user.role)}">${escapeHtml(user.role)}</span></span>
+                            <span data-label="Status">${user.is_active ? '<span class="tag tag-active">Active</span>' : '<span class="tag tag-inactive">Inactive</span>'}</span>
+                            <span class="cell-muted" data-label="Joined">${escapeHtml(user.created_at)}</span>
+                            <span data-label="Account"><button type="button" class="button button-small account-status-toggle" data-user-id="${Number(user.id)}" ${Number(user.id) === currentAdminId ? 'disabled aria-label="You cannot deactivate your own account"' : `aria-label="${user.is_active ? 'Deactivate' : 'Activate'} ${escapeHtml(user.full_name)}"`}>${user.is_active ? "Deactivate" : "Activate"}</button></span>
+                        </div>`).join("");
+                }
+
+                document.getElementById("stat-users").textContent = Number(result.total) || 0;
+                document.getElementById("users-page-status").textContent = usersTotalPages
+                    ? `Page ${result.page} of ${usersTotalPages}`
+                    : "No pages";
+                document.getElementById("users-previous").disabled = usersPage <= 1;
+                document.getElementById("users-next").disabled = usersPage >= usersTotalPages;
+            } catch (error) {
+                body.setAttribute("aria-busy", "false");
+                body.innerHTML = '<div class="table-empty">Unable to load accounts.</div>';
+            }
+        }
+
+        document.getElementById("users-previous").addEventListener("click", () => {
+            if (usersPage > 1) {
+                usersPage -= 1;
+                loadUsers();
+            }
+        });
+
+        document.getElementById("users-next").addEventListener("click", () => {
+            if (usersPage < usersTotalPages) {
+                usersPage += 1;
+                loadUsers();
+            }
+        });
+
+        document.getElementById("users-body").addEventListener("click", async (event) => {
+            const button = event.target.closest(".account-status-toggle");
+            if (!button || button.disabled) return;
+
+            const userId = Number(button.dataset.userId);
+            const isActive = button.textContent.trim() !== "Activate";
+            const message = document.getElementById("users-message");
+            button.disabled = true;
+            message.textContent = isActive ? "Deactivating account…" : "Activating account…";
+
+            try {
+                const response = await fetch(`/api/admin/users/${userId}/status`, {
+                    method: "PATCH",
+                    credentials: "same-origin",
+                    headers: {"Content-Type": "application/json", "Accept": "application/json", "X-CSRF-Token": csrfToken()},
+                    body: JSON.stringify({is_active: !isActive}),
+                });
+                if (!response.ok) throw new Error("Unable to update account status.");
+
+                message.textContent = "Account status updated.";
+                await loadUsers();
+            } catch (error) {
+                button.disabled = false;
+                message.textContent = "Unable to update account status. Please try again.";
+            }
+        });
+
+        async function loadLeads() {
+            const body = document.getElementById("leads-body");
+            body.setAttribute("aria-busy", "true");
+            try {
+                const response = await fetch("/api/leads/?limit=20", {credentials: "same-origin"});
+                if (!response.ok) throw new Error("Unable to load leads.");
+
+                const leads = await response.json();
+                body.setAttribute("aria-busy", "false");
+                if (!Array.isArray(leads) || !leads.length) {
+                    body.innerHTML = '<div class="table-empty">No leads yet.</div>';
+                    document.getElementById("stat-leads").textContent = "0";
+                    return;
+                }
+
+                body.innerHTML = leads.map((lead) => `
+                    <div class="table-row">
+                        <span data-label="Contact">${escapeHtml(lead.contact_name || lead.email)}</span>
+                        <span class="cell-muted" data-label="Package">${lead.package_id ? `Package #${escapeHtml(lead.package_id)}` : "—"}</span>
+                        <span data-label="Status"><span class="tag tag-stage">${escapeHtml(lead.status)}</span></span>
+                    </div>`).join("");
+                document.getElementById("stat-leads").textContent = leads.length;
+            } catch (error) {
+                body.setAttribute("aria-busy", "false");
+                body.innerHTML = '<div class="table-empty">Unable to load leads.</div>';
+            }
+        }
+
+        document.getElementById("logout-button").addEventListener("click", async (event) => {
+            const button = event.currentTarget;
+            const message = document.getElementById("users-message");
+            button.disabled = true;
+            message.textContent = "Signing out…";
+            try {
+                const response = await fetch("/api/auth/logout", {method: "POST", credentials: "same-origin", headers: {"X-CSRF-Token": csrfToken()}});
+                if (!response.ok) throw new Error("Sign-out request failed.");
+                window.location.assign("/login");
+            } catch (error) {
+                button.disabled = false;
+                message.textContent = "Unable to sign out. Please try again.";
+            }
+        });
+
+        document.addEventListener("DOMContentLoaded", () => {
+            if (window.lucide) window.lucide.createIcons();
+            loadUsers();
+            loadLeads();
+        });
+    </script>
+</body>
+</html>

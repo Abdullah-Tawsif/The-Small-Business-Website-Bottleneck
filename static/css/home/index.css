@@ -9,3 +9,11 @@ body:not(.auth-page) main,
 body:not(.auth-page) .site-footer {
   position: relative;
 }
+.preview-bottom a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--green-dark);
+  font-weight: 700;
+  font-size: 12px;
+}

@@ -13,7 +13,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from database.database import SessionLocal, init_db
+from database.database import SessionLocal, verify_schema
 from models.user import User
 from utils.security import PasswordError, hash_password
 
@@ -88,9 +88,12 @@ def main():
     """Interactive administrator creation."""
 
     try:
-        init_db()
+        verify_schema()
+    except RuntimeError as exc:
+        print(f"Database schema is not ready: {exc}")
+        return 1
     except SQLAlchemyError:
-        print("Database initialization failed.")
+        print("Database schema verification failed.")
         return 1
 
     print("\n=== Initial Administrator Setup ===\n")
