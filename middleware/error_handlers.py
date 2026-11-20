@@ -54,7 +54,7 @@ def register_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(StarletteHTTPException)
     async def http_error_handler(request: Request, exc: StarletteHTTPException):
         if request.method == "GET":
-            if request.url.path in {"/dashboard", "/admin"} and exc.status_code == 401:
+            if request.url.path in {"/dashboard", "/user", "/admin"} and exc.status_code == 401:
                 return RedirectResponse(url="/login", status_code=303)
             if request.url.path == "/admin" and exc.status_code == 403:
                 return RedirectResponse(url="/dashboard", status_code=303)

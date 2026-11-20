@@ -9,6 +9,7 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from database.database import Base
+from database.adopt_legacy import adopt
 from database.migration_safety import REPOSITORY_ROOT, migration_database_url
 from models.package import Package
 
@@ -56,10 +57,10 @@ def test_legacy_schema_adoption_and_upgrade_preserve_synthetic_records(
     database_path = tmp_path / "legacy.sqlite"
     database_url = f"sqlite:///{database_path}"
     monkeypatch.setenv("DATABASE_URL", database_url)
+    command.upgrade(alembic_config(), "4b0699abd0b3")
     engine = create_engine(database_url)
-    Base.metadata.create_all(engine)
     with engine.begin() as connection:
-        connection.exec_driver_sql("DROP INDEX ix_leads_created_at_id")
+        connection.exec_driver_sql("DROP TABLE alembic_version")
     with Session(engine) as session:
         session.add(
             Package(
@@ -114,8 +115,83 @@ def test_migration_target_guard_rejects_repository_databases(
 ):
     # This test validates the guard before any connection is created.
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{database_path}")
-    with pytest.raises(RuntimeError, match="refuse|limited to /tmp"):
+    with pytest.raises(RuntimeError, match="refuse|limited to"):
         migration_database_url()
+
+
+def test_migration_temp_root_is_platform_aware(monkeypatch, tmp_path):
+    import database.migration_safety as safety
+
+    monkeypatch.setattr(safety, "TEMP_ROOT", tmp_path.resolve())
+    target = tmp_path / "platform-temp.sqlite"
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{target}")
+    assert migration_database_url()
+
+
+def test_legacy_backup_copy_adoption_keeps_records_and_source(tmp_path, monkeypatch):
+    backup = tmp_path / "separately-backed-up.sqlite"
+    backup_url = f"sqlite:///{backup}"
+    monkeypatch.setenv("DATABASE_URL", backup_url)
+    command.upgrade(alembic_config(), "4b0699abd0b3")
+    source_engine = create_engine(backup_url)
+    with source_engine.begin() as connection:
+        connection.exec_driver_sql("DROP TABLE alembic_version")
+    with Session(source_engine) as session:
+        session.add(
+            Package(
+                name="Backup preserved package",
+                slug="backup-preserved-package",
+                description="must survive adoption",
+                min_price=Decimal("12.00"),
+                max_price=Decimal("24.00"),
+                currency="BDT",
+                features=["backup-test"],
+                is_active=True,
+                display_order=1,
+            )
+        )
+        session.commit()
+    source_engine.dispose()
+
+    target = tmp_path / "agencyforge-legacy-import.sqlite"
+    adopt(backup, target)
+
+    migrated = create_engine(f"sqlite:///{target}")
+    source = create_engine(backup_url)
+    try:
+        with Session(migrated) as session:
+            package = session.scalar(
+                select(Package).where(Package.slug == "backup-preserved-package")
+            )
+            assert package is not None
+            assert package.description == "must survive adoption"
+        with source.connect() as connection:
+            assert connection.exec_driver_sql(
+                "SELECT COUNT(*) FROM sqlite_master "
+                "WHERE type='table' AND name='alembic_version'"
+            ).scalar_one() == 0
+            assert connection.exec_driver_sql(
+                "SELECT COUNT(*) FROM packages WHERE slug='backup-preserved-package'"
+            ).scalar_one() == 1
+    finally:
+        migrated.dispose()
+        source.dispose()
+
+
+def test_legacy_adoption_rejects_invalid_schema_and_preserves_backup(tmp_path):
+    from database.legacy_adoption import verify_legacy_schema
+
+    backup = tmp_path / "invalid.sqlite"
+    engine = create_engine(f"sqlite:///{backup}")
+    with engine.begin() as connection:
+        connection.exec_driver_sql("CREATE TABLE unrelated (value TEXT)")
+    with pytest.raises(RuntimeError, match="missing required tables"):
+        verify_legacy_schema(engine)
+    with engine.connect() as connection:
+        assert connection.exec_driver_sql(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='unrelated'"
+        ).scalar_one() == "unrelated"
+    engine.dispose()
 
 
 def test_migrations_require_explicit_database_url(monkeypatch):

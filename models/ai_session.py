@@ -68,6 +68,7 @@ class AISession(Base):
             "status",
             "created_at",
         ),
+        Index("ix_ai_sessions_owner_user_id", "owner_user_id"),
     )
 
     # --------------------------------------------------
@@ -87,6 +88,22 @@ class AISession(Base):
     lead_id: Mapped[int | None] = mapped_column(
         ForeignKey("leads.id", ondelete="SET NULL"),
         nullable=True,
+    )
+
+    owner_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id"),
+        nullable=True,
+    )
+
+    guest_capability_hash: Mapped[str | None] = mapped_column(
+        String(64),
+        nullable=True,
+    )
+
+    expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        index=True,
     )
 
     # --------------------------------------------------

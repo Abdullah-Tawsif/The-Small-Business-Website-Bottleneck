@@ -23,6 +23,7 @@ if config.config_file_name is not None:
 
 from database.database import Base  # noqa: E402
 from models import ai_session, lead, package, user  # noqa: E402, F401
+from database.legacy_adoption import verify_legacy_schema  # noqa: E402
 
 target_metadata = Base.metadata
 
@@ -68,6 +69,10 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
+        # Baseline stamping adopts an existing schema; never stamp a partial or
+        # unrelated database. Fresh databases use `upgrade`, which creates it.
+        if getattr(config.cmd_opts, "cmd", None) == "stamp":
+            verify_legacy_schema(connection.engine)
         context.configure(
             connection=connection,
             target_metadata=target_metadata,

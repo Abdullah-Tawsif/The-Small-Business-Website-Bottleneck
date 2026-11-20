@@ -1,1 +1,17 @@
-Generic single-database configuration.
+# Alembic migration safety
+
+Set `DATABASE_URL` explicitly for every migration command. Temporary SQLite
+tests may use a file under `tempfile.gettempdir()`. The protected repository
+file `agencyforge.db` and every symlink resolving to it are refused. Other
+persistent targets need `ALLOW_NON_TMP_MIGRATIONS=1` after an operator has
+verified the target and backup.
+
+For an old SQLite database, create and verify a separate backup first, then use
+`python -m database.adopt_legacy --backup /safe/agencyforge-legacy-backup.sqlite
+--target /tmp/agencyforge-legacy-import.sqlite`. The adoption tool copies the
+backup, verifies the baseline schema before stamping, upgrades to `head`, runs
+`alembic check`, and compares application row counts. See the README for the
+full recovery procedure. Never stamp or upgrade the protected database.
+
+Legacy SQLite baseline adoption is distinct from moving SQLite records to
+PostgreSQL. The application does not implement a SQLite-to-PostgreSQL transfer.

@@ -1,6 +1,8 @@
 """AgencyForge FastAPI application entry point."""
 
 import logging
+import asyncio
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -28,6 +30,9 @@ from routes.scoping import router as scoping_router
 
 BASE_DIR = Path(__file__).resolve().parent
 logger = logging.getLogger(__name__)
+_READINESS_CACHE_TTL = 2.0
+_READINESS_CACHE: tuple[float, bool] | None = None
+_READINESS_LOCK = asyncio.Lock()
 
 
 @asynccontextmanager
@@ -151,6 +156,19 @@ async def dashboard(
     )
 
 
+@app.get("/user", include_in_schema=False)
+async def user_workspace(
+    request: Request,
+    user: User = Depends(get_current_user),
+):
+    """Serve the signed-in user's project workspace."""
+    return templates.TemplateResponse(
+        request=request,
+        name="user/user.html",
+        context={"user": user},
+    )
+
+
 @app.get("/admin", include_in_schema=False)
 async def admin_page(
     request: Request,
@@ -172,19 +190,37 @@ async def health():
 
 @app.get("/ready", include_in_schema=False)
 async def readiness(request: Request):
-    """Report readiness only while the database and configured Redis respond."""
-    try:
-        verify_schema()
-        settings = get_settings()
-        if settings.rate_limit_redis_url:
-            redis_client = getattr(request.app.state, "rate_limit_redis", None)
-            if redis_client is None:
-                raise RuntimeError("Shared rate-limit storage is unavailable.")
-            await redis_client.ping()
-    except Exception as exc:
-        logger.error("Application readiness check failed.")
+    """Report bounded, briefly cached DB and configured Redis availability."""
+    global _READINESS_CACHE
+    now = time.monotonic()
+    if _READINESS_CACHE and now - _READINESS_CACHE[0] < _READINESS_CACHE_TTL:
+        healthy = _READINESS_CACHE[1]
+    else:
+        async with _READINESS_LOCK:
+            now = time.monotonic()
+            if _READINESS_CACHE and now - _READINESS_CACHE[0] < _READINESS_CACHE_TTL:
+                healthy = _READINESS_CACHE[1]
+            else:
+                healthy = True
+                try:
+                    verify_schema()
+                    settings = get_settings()
+                    if settings.rate_limit_redis_url:
+                        redis_client = getattr(
+                            request.app.state, "rate_limit_redis", None
+                        )
+                        if redis_client is None:
+                            raise RuntimeError(
+                                "Shared rate-limit storage is unavailable."
+                            )
+                        await redis_client.ping()
+                except Exception:
+                    healthy = False
+                    logger.error("Application readiness check failed.")
+                _READINESS_CACHE = (time.monotonic(), healthy)
+    if not healthy:
         raise HTTPException(
             status_code=503,
             detail="Service is temporarily unavailable.",
-        ) from exc
+        )
     return {"status": "ready"}

@@ -5,25 +5,52 @@ SQLite is the zero-configuration local default.
 PostgreSQL is supported for production deployments.
 """
 
-import os
 from collections.abc import Generator
 from pathlib import Path
 
 from alembic.script import ScriptDirectory
-from dotenv import load_dotenv
 from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+from config.settings import get_settings
 
-load_dotenv()
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "sqlite:///./agencyforge-dev.sqlite",
-)
+def configured_database_url() -> str:
+    """Return the validated database URL from the shared settings source."""
+    settings = get_settings()
+    if settings.database_url:
+        from sqlalchemy.engine import make_url
+
+        try:
+            parsed = make_url(settings.database_url)
+        except (TypeError, ValueError) as exc:
+            raise RuntimeError("DATABASE_URL is invalid.") from exc
+        if settings.environment.lower() == "production" and (
+            parsed.get_backend_name() != "postgresql"
+            or not parsed.host
+            or not parsed.database
+        ):
+            raise RuntimeError(
+                "Production DATABASE_URL must identify a PostgreSQL host and database."
+            )
+        if parsed.get_backend_name() == "postgresql" and parsed.drivername == "postgresql":
+            parsed = parsed.set(drivername="postgresql+psycopg")
+        return parsed.render_as_string(hide_password=False)
+    if settings.environment.lower() == "production":
+        raise RuntimeError("DATABASE_URL is required in production.")
+    return "sqlite:///./agencyforge-dev.sqlite"
 
 def create_database_engine(database_url: str):
     """Create an engine with SQLite foreign keys enabled for every connection."""
-    is_sqlite = database_url.startswith("sqlite")
+    from sqlalchemy.engine import make_url
+
+    parsed_url = make_url(database_url)
+    if (
+        parsed_url.get_backend_name() == "postgresql"
+        and parsed_url.drivername == "postgresql"
+    ):
+        parsed_url = parsed_url.set(drivername="postgresql+psycopg")
+    database_url = parsed_url.render_as_string(hide_password=False)
+    is_sqlite = parsed_url.get_backend_name() == "sqlite"
     engine = create_engine(
         database_url,
         pool_pre_ping=True,
@@ -43,6 +70,7 @@ def create_database_engine(database_url: str):
     return engine
 
 
+DATABASE_URL = configured_database_url()
 engine = create_database_engine(DATABASE_URL)
 
 

@@ -3,7 +3,6 @@ from types import SimpleNamespace
 
 import pytest
 from alembic.script import ScriptDirectory
-from fastapi.testclient import TestClient
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
@@ -14,6 +13,7 @@ from database.database import Base, get_db
 from main import app
 from models.user import User
 from utils.security import create_access_token, hash_password
+from asgi_client import SyncASGIClient
 
 
 @pytest.fixture
@@ -45,6 +45,8 @@ def admin_client(tmp_path, monkeypatch):
         "JWT_SECRET_KEY",
         "isolated-admin-ui-tests-secret-at-least-32-bytes",
     )
+    monkeypatch.setenv("ENVIRONMENT", "development")
+    monkeypatch.setenv("RATE_LIMIT_REDIS_URL", "")
     get_settings.cache_clear()
 
     def override_get_db():
@@ -54,7 +56,7 @@ def admin_client(tmp_path, monkeypatch):
     app.dependency_overrides[get_db] = override_get_db
 
     try:
-        with TestClient(app) as client:
+        with SyncASGIClient(app) as client:
             with test_sessions() as db:
                 admin = User(
                     full_name="Test Administrator",
@@ -231,9 +233,9 @@ def test_home_preview_continue_opens_the_real_inquiry_workflow():
     home_page = Path("templates/home/index.html").read_text()
     home_styles = Path("static/css/home/index.css").read_text()
     assert 'href="/static/css/home/index.css"' in home_page
-    assert '<a class="button" href="/inquiry">Start scoping' in home_page
-    assert '<a href="/inquiry" aria-label="Continue to project inquiry">Continue</a>' in home_page
-    assert '<button type="button">Continue</button>' not in home_page
+    assert '<a class="button" href="/inquiry">Plan a website project' in home_page
+    assert '<a href="/inquiry">Start inquiry' in home_page
+    assert '<button type="button">Start inquiry</button>' not in home_page
     assert ".preview-bottom a" in home_styles
 
 
@@ -245,6 +247,22 @@ def test_unauthenticated_dashboard_redirects_to_sign_in(admin_client):
 
     assert response.status_code == 303
     assert response.headers["location"] == "/login"
+
+
+def test_user_workspace_is_authenticated_and_renders_the_signed_in_account(admin_client):
+    client, staff_id = admin_client
+    cookie_name = get_settings().access_token_cookie_name
+    client.cookies.delete(cookie_name)
+    redirected = client.get("/user", follow_redirects=False)
+    assert redirected.status_code == 303
+    assert redirected.headers["location"] == "/login"
+
+    client.cookies.set(cookie_name, create_access_token(staff_id, "staff"))
+    page = client.get("/user")
+    assert page.status_code == 200
+    assert "Test Staff" in page.text
+    assert "staff-test@example.invalid" in page.text
+    assert 'href="/admin"' not in page.text
 
 
 def test_inquiry_budget_fields_have_accessible_names():

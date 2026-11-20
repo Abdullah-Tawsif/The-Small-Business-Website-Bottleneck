@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pytest
 from alembic.script import ScriptDirectory
-from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
@@ -13,6 +12,7 @@ from config.settings import get_settings
 from database.database import Base, get_db
 from main import app
 from models.lead import Lead
+from asgi_client import SyncASGIClient
 
 
 @pytest.fixture
@@ -44,6 +44,8 @@ def client(tmp_path, monkeypatch):
         "JWT_SECRET_KEY",
         "isolated-lead-api-tests-secret-at-least-32-bytes",
     )
+    monkeypatch.setenv("ENVIRONMENT", "development")
+    monkeypatch.setenv("RATE_LIMIT_REDIS_URL", "")
     get_settings.cache_clear()
 
     def override_get_db():
@@ -54,7 +56,7 @@ def client(tmp_path, monkeypatch):
     app.dependency_overrides[get_db] = override_get_db
 
     try:
-        with TestClient(app) as test_client:
+        with SyncASGIClient(app) as test_client:
             yield test_client, test_sessions
     finally:
         app.dependency_overrides.clear()

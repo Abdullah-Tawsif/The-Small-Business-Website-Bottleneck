@@ -8,6 +8,17 @@ from models.user import User
 from utils.security import hash_password, verify_password
 
 
+# A syntactically valid hash with a fixed salt and an unreachable zero digest.
+# It equalizes password-hash work for unknown accounts without creating a
+# usable credential.
+_DUMMY_PASSWORD_HASH = (
+    "scrypt$16384$8$1$"
+    + "00" * 16
+    + "$"
+    + "00" * 32
+)
+
+
 def get_user_by_email(db: Session, email: str) -> User | None:
     """Find a user using a normalized email address."""
     normalized_email = email.strip().lower()
@@ -77,6 +88,7 @@ def authenticate_user(
     user = get_user_by_email(db, email)
 
     if user is None:
+        verify_password(password, _DUMMY_PASSWORD_HASH)
         return None
 
     # Check the password even for disabled accounts so the

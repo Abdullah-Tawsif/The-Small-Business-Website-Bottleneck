@@ -91,6 +91,18 @@ def get_current_user(
     return user
 
 
+def get_optional_current_user(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> User | None:
+    """Return an authenticated user when credentials are present, else None."""
+    if not request.cookies.get(get_settings().access_token_cookie_name) and not request.headers.get(
+        "Authorization"
+    ):
+        return None
+    return get_current_user(request, db)
+
+
 def get_current_admin_user(
     user: User = Depends(get_current_user),
 ) -> User:

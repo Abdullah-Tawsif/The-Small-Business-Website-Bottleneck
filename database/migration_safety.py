@@ -1,12 +1,14 @@
 """Validate explicit Alembic targets before any connection is opened."""
 
 import os
+import tempfile
 from pathlib import Path
 
 from sqlalchemy.engine import make_url
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 FORBIDDEN_DATABASE = (REPOSITORY_ROOT / "agencyforge.db").resolve()
+TEMP_ROOT = Path(tempfile.gettempdir()).resolve()
 
 
 def migration_database_url() -> str:
@@ -23,11 +25,12 @@ def migration_database_url() -> str:
         database = url.database
         if not database or database == ":memory:":
             raise RuntimeError("Migrations require a persistent SQLite database file.")
-        path = Path(database)
+        path = Path(database).expanduser()
         if not path.is_absolute():
-            path = (Path.cwd() / path).resolve()
-        else:
-            path = path.resolve()
+            path = Path.cwd() / path
+        # resolve() follows existing symlink parents, preventing an apparently
+        # temporary path from redirecting a migration into a protected file.
+        path = path.resolve(strict=False)
         if path == FORBIDDEN_DATABASE or path.name == "agencyforge.db":
             raise RuntimeError("Migrations refuse the protected agencyforge.db file.")
         try:
@@ -40,13 +43,17 @@ def migration_database_url() -> str:
                 "SQLite migrations refuse repository databases unless "
                 "ALLOW_NON_TMP_MIGRATIONS=1 is explicitly set."
             )
-        if not path.is_relative_to(Path("/tmp")) and not allow_non_tmp:
+        if not path.is_relative_to(TEMP_ROOT) and not allow_non_tmp:
             raise RuntimeError(
-                "SQLite migrations are limited to /tmp unless "
+                f"SQLite migrations are limited to {TEMP_ROOT} unless "
                 "ALLOW_NON_TMP_MIGRATIONS=1 is explicitly set."
             )
     elif not allow_non_tmp:
         raise RuntimeError(
             "Non-SQLite migrations require explicit ALLOW_NON_TMP_MIGRATIONS=1."
+        )
+    if url.get_backend_name() == "postgresql" and url.drivername == "postgresql":
+        return url.set(drivername="postgresql+psycopg").render_as_string(
+            hide_password=False
         )
     return raw_url
