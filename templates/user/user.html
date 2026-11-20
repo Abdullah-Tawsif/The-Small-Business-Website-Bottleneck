@@ -12,6 +12,7 @@
 </main>
 <footer class="site-footer section-shell"><a class="brand" href="/"><span class="brand-mark">S</span><span>scopewise</span></a><span>© 2026 Scopewise. Built for better beginnings.</span><div><a href="/dashboard">Dashboard</a><a href="/">Home</a></div></footer>
 <script>
-document.getElementById('logout-button').addEventListener('click',async(e)=>{e.preventDefault();const r=await fetch('/api/auth/logout',{method:'POST',credentials:'same-origin'});if(r.ok)location.href='/login';});
+function csrfToken(){const item=document.cookie.split(';').map((value)=>value.trim()).find((value)=>value.startsWith('csrf_token='));return item?decodeURIComponent(item.slice('csrf_token='.length)):'';}
+document.getElementById('logout-button').addEventListener('click',async(e)=>{e.preventDefault();const r=await fetch('/api/auth/logout',{method:'POST',credentials:'same-origin',headers:{'X-CSRF-Token':csrfToken()}});if(r.ok)location.href='/login';});
 document.addEventListener('DOMContentLoaded',()=>{if(window.lucide)window.lucide.createIcons();});
 </script></body></html>

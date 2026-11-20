@@ -7,30 +7,43 @@ PostgreSQL is supported for production deployments.
 
 import os
 from collections.abc import Generator
+from pathlib import Path
 
+from alembic.script import ScriptDirectory
 from dotenv import load_dotenv
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
-
 
 load_dotenv()
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "sqlite:///./agencyforge.db",
+    "sqlite:///./agencyforge-dev.sqlite",
 )
 
-connect_args = (
-    {"check_same_thread": False}
-    if DATABASE_URL.startswith("sqlite")
-    else {"connect_timeout": 5}
-)
+def create_database_engine(database_url: str):
+    """Create an engine with SQLite foreign keys enabled for every connection."""
+    is_sqlite = database_url.startswith("sqlite")
+    engine = create_engine(
+        database_url,
+        pool_pre_ping=True,
+        connect_args=(
+            {"check_same_thread": False}
+            if is_sqlite
+            else {"connect_timeout": 5}
+        ),
+    )
+    if is_sqlite:
+        @event.listens_for(engine, "connect")
+        def enable_sqlite_foreign_keys(connection, _record):
+            cursor = connection.cursor()
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.close()
 
-engine = create_engine(
-    DATABASE_URL,
-    pool_pre_ping=True,
-    connect_args=connect_args,
-)
+    return engine
+
+
+engine = create_database_engine(DATABASE_URL)
 
 
 class Base(DeclarativeBase):
@@ -54,17 +67,32 @@ def get_db() -> Generator[Session, None, None]:
         yield db
 
 
-def init_db() -> None:
-    """
-    Import all application models before creating database tables.
+def verify_schema() -> None:
+    """Require a current schema; ordinary startup must never mutate it."""
 
-    Imports are intentionally local to avoid circular imports because
-    each model imports Base from this module.
-    """
-
-    from models.user import User  # noqa: F401
-    from models.package import Package  # noqa: F401
-    from models.lead import Lead  # noqa: F401
     from models.ai_session import AISession  # noqa: F401
+    from models.lead import Lead  # noqa: F401
+    from models.package import Package  # noqa: F401
+    from models.user import User  # noqa: F401
 
-    Base.metadata.create_all(bind=engine)
+    inspector = inspect(engine)
+    missing_tables = sorted(
+        set(Base.metadata.tables) - set(inspector.get_table_names())
+    )
+    if missing_tables or not inspector.has_table("alembic_version"):
+        raise RuntimeError(
+            "Database schema is not initialized. Run `alembic upgrade head` first."
+        )
+
+    scripts = ScriptDirectory(
+        str(Path(__file__).resolve().parents[1] / "migrations")
+    )
+    expected_revision = scripts.get_current_head()
+    with engine.connect() as connection:
+        current_revision = connection.scalar(
+            text("SELECT version_num FROM alembic_version")
+        )
+    if current_revision != expected_revision:
+        raise RuntimeError(
+            "Database schema is not at the latest migration. Run `alembic upgrade head`."
+        )

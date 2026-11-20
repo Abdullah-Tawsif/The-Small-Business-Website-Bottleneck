@@ -2,8 +2,9 @@
 """API routes for customer lead submission and admin lead management."""
 
 import logging
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -16,12 +17,19 @@ from services.lead_service import (
     LeadNotFoundError,
     LeadServiceError,
     PackageUnavailableError,
+)
+from services.lead_service import (
     create_lead as create_lead_service,
+)
+from services.lead_service import (
     get_lead_by_id as get_lead_by_id_service,
+)
+from services.lead_service import (
     list_leads as list_leads_service,
+)
+from services.lead_service import (
     update_lead_status as update_lead_status_service,
 )
-
 
 logger = logging.getLogger(__name__)
 
@@ -150,7 +158,7 @@ def read_leads(
     summary="Get lead by ID",
 )
 def read_lead(
-    lead_id: int,
+    lead_id: int = Path(..., ge=1),
     db: Session = Depends(get_db),
     admin: User = Depends(get_current_admin_user),
 ):
@@ -188,7 +196,7 @@ def read_lead(
     summary="Update lead status",
 )
 def change_lead_status(
-    lead_id: int,
+    lead_id: Annotated[int, Path(ge=1)],
     payload: LeadStatusUpdate,
     db: Session = Depends(get_db),
     admin: User = Depends(get_current_admin_user),

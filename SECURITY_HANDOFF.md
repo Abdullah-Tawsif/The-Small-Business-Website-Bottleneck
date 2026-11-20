@@ -13,7 +13,7 @@
 - Implement authentication dependencies and role checks after confirming Person 2's SQLAlchemy `User` model and database session interface.
 - Implement `services/auth_service.py` and `routes/auth.py` against the agreed user model/schema.
 - Configure PostgreSQL and run the full application integration tests.
-- Add CSRF protection if authentication is moved to browser cookies. For bearer tokens in the Authorization header, do not store tokens in localStorage without an explicit threat-model decision.
+- Login and registration, plus state-changing requests authenticated by the session cookie, require matching Origin or Referer evidence. Cookie-authenticated writes also require a matching readable CSRF cookie and `X-CSRF-Token` header. Bearer-token clients do not need the CSRF token; do not store bearer tokens in localStorage without an explicit threat-model decision.
 
 ## Important limitations
 The in-memory rate limiter is for a single-process prototype. It does not coordinate limits across multiple workers or machines; use Redis for that deployment model. The current limiter is global per client IP and should be tuned for the demo.

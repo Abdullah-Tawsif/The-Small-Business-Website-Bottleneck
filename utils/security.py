@@ -88,14 +88,22 @@ def create_access_token(
     expires_minutes: int | None = None,
 ) -> str:
     """Create a short-lived signed JWT. Secret is read from environment settings."""
-    if user_id <= 0:
+    if isinstance(user_id, bool) or not isinstance(user_id, int) or user_id <= 0:
         raise SecurityError("Invalid user ID.")
     if role not in ALLOWED_ROLES:
         raise SecurityError("Invalid user role.")
 
     settings = get_settings()
-    lifetime = expires_minutes or settings.access_token_expire_minutes
-    if not 1 <= lifetime <= 1440:
+    lifetime = (
+        settings.access_token_expire_minutes
+        if expires_minutes is None
+        else expires_minutes
+    )
+    if (
+        isinstance(lifetime, bool)
+        or not isinstance(lifetime, int)
+        or not 1 <= lifetime <= 1440
+    ):
         raise SecurityError("Token lifetime must be between 1 and 1440 minutes.")
 
     now = int(time.time())

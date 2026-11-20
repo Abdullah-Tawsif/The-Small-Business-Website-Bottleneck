@@ -146,20 +146,24 @@ The application starts through `main.py`.
 The initialization process:
 
 1. Creates the FastAPI application.
-2. Registers middleware.
+2. Registers the rate-limit and request-size middleware.
 3. Registers global exception handlers.
 4. Includes the authentication router.
 5. Includes the public router.
 6. Includes the AI scoping router.
 7. Includes the lead router.
 8. Includes the analytics router.
-9. Mounts static files.
-10. Configures Jinja2 templates.
-11. Initializes database tables through the application lifespan.
+9. Includes the administrator user-management router.
+10. Mounts static files and configures Jinja2 templates.
+11. On startup, validates runtime settings and confirms the database has the latest Alembic revision.
+12. Opens and checks the configured Redis connection when shared rate limits are enabled; closes it on shutdown.
 
-The database initialization function imports the registered SQLAlchemy models and calls `Base.metadata.create_all()`.
+`/health` is a liveness endpoint. `/ready` checks the current database schema
+and, when configured, Redis connectivity before reporting readiness.
 
-The administrator router is implemented separately in `routes/admin.py` and must be registered by the Team Lead in `main.py`.
+Startup does not create or migrate tables. Fresh databases are initialized with `alembic upgrade head`; an unmigrated or stale schema prevents the service from starting.
+
+The administrator router is implemented in `routes/admin.py` and included by `main.py`.
 
 ---
 
@@ -289,7 +293,7 @@ python create_admin.py
 
 The script:
 
-1. Initializes the database.
+1. Verifies that the configured database is already migrated.
 2. Requests the administrator's full name.
 3. Requests the email address.
 4. Requests a hidden password through `getpass`.
@@ -359,13 +363,22 @@ SQLAlchemy provides:
 - Database engine configuration
 - Declarative model base
 - Session management
-- Database initialization
+- Schema verification before serving application requests
 
 SQLite is the default local development database.
 
 PostgreSQL is supported for production deployments.
 
 JSON columns use compatible database types, including PostgreSQL JSONB.
+
+Alembic revisions live under `migrations/`. The initial migration captures the
+existing ORM schema without speculative changes. Migration commands require an
+explicit target and guard repository databases; startup checks the recorded
+revision but never applies DDL. SQLite application connections enable foreign
+key enforcement. `ix_leads_created_at_id` supports the bounded newest-first
+admin lead query; it was added in a reversible follow-up migration after a
+20,000-row SQLite query-plan comparison showed the unindexed sort scanning and
+sorting all rows.
 
 ### 10.1 User Model
 
@@ -569,11 +582,18 @@ Unexpected server errors are logged internally without exposing exception detail
 
 `middleware/rate_limiter.py`
 
-Implements an in-memory fixed-window rate limiter using client IP addresses.
+Implements fixed-window rate limiting using client IP addresses.
 
-The current implementation is designed for a single-process deployment.
+When `RATE_LIMIT_REDIS_URL` is configured, an atomic Redis Lua operation shares fixed-window counts across workers. Production requires the shared URL and fails closed when the service is unavailable. Development can omit Redis and use the in-process limiter. Client IPs come from the socket peer; forwarded headers are not trusted.
 
-A shared store such as Redis is recommended for multi-worker or distributed production deployments.
+`middleware/security_headers.py` adds content-type, framing, referrer, feature-policy, and opener headers. HSTS is added when `ENVIRONMENT=production`; HTTPS termination must be provided by the deployment.
+
+`middleware/csrf_protection.py` rejects cross-origin browser writes and requires
+a matching `csrf_token` cookie and `X-CSRF-Token` header for state-changing
+requests authenticated by the session cookie. Configure trusted proxy handling
+so the ASGI request scheme reflects the public HTTPS origin. A Content Security
+Policy is deferred while templates still use inline scripts and styles and
+load Google Fonts and Lucide externally.
 
 ---
 
@@ -619,6 +639,7 @@ Page routes currently include:
 - `/inquiry`
 - `/packages`
 - `/dashboard`
+- `/admin` (active administrators only)
 
 The frontend communicates with backend API endpoints for authentication, package selection, pricing, inquiries and AI scoping.
 
@@ -684,17 +705,18 @@ python -m pytest -q
 
 Before production deployment, the following should be addressed:
 
-1. Use a strong, unique JWT signing secret.
-2. Enable HTTPS and secure cookies.
+1. Supply a strong, unique JWT signing secret and `RATE_LIMIT_REDIS_URL`.
+2. Enable HTTPS and secure cookies at the deployment edge.
 3. Use PostgreSQL or another managed production database.
-4. Introduce database migrations, such as Alembic.
-5. Use Redis or another shared rate-limit store for multiple workers.
-6. Configure trusted proxy handling where applicable.
-7. Review AI provider credentials and request limits.
-8. Configure production logging and monitoring.
-9. Verify CORS and CSRF protections for the frontend deployment.
-10. Establish automated backups and recovery procedures.
-11. Test authentication and authorization behavior under production configuration.
+4. Run and verify Alembic migrations as a separate release operation.
+5. Configure trusted proxy handling only for known proxy addresses.
+6. Review AI provider credentials and request limits.
+7. Configure production logging, monitoring, and alerting.
+8. Establish automated backups and tested recovery procedures.
+9. Test authentication and authorization behavior under production configuration.
+
+The repository includes GitHub Actions quality checks but no container image,
+deployment manifest, production monitoring integration, or live Redis service.
 
 ---
 

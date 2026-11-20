@@ -1,5 +1,24 @@
 <!doctype html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Dashboard — Scopewise</title><link rel="stylesheet" href="/static/css/base.css"></head>
-<body class="auth-page"><main class="auth-shell"><section class="auth-card"><a class="brand auth-brand" href="/"><span class="brand-mark">S</span><span>scopewise</span></a><div class="auth-heading"><span class="section-kicker">Your workspace</span><h1>Welcome, <span>{{ user.full_name }}.</span></h1><p>You’re signed in. Your AgencyForge workspace is ready.</p></div><div class="form-message is-success" role="status">Authentication successful. This is your starter dashboard page.</div><p class="auth-switch"><a href="/">Back to home</a></p><button class="button button-full" id="logout-button" type="button">Sign out</button></section></main><script>
-document.getElementById('logout-button').addEventListener('click', async () => { const r = await fetch('/api/auth/logout', {method:'POST'}); if (r.ok) location.href='/login'; });
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Dashboard — Scopewise</title><link rel="stylesheet" href="/static/css/base.css"><link rel="stylesheet" href="/static/css/auth/fallbacks.css"></head>
+<body class="auth-page"><main class="auth-shell"><section class="auth-card"><a class="brand auth-brand" href="/"><span class="brand-mark">S</span><span>scopewise</span></a><div class="auth-heading"><span class="section-kicker">Your workspace</span><h1>Welcome, <span>{{ user.full_name }}.</span></h1><p>You’re signed in. Start a project inquiry or return to the home page.</p></div><p><a class="button button-full" href="/inquiry">Start a project inquiry</a></p>{% if user.role == "admin" %}<p><a class="button button-full" href="/admin">Open admin overview</a></p>{% endif %}<p class="auth-switch"><a href="/">Back to home</a></p><button class="button button-full" id="logout-button" type="button">Sign out</button><div id="logout-message" class="form-message" role="status" aria-live="polite"></div></section></main><script>
+const logoutButton = document.getElementById('logout-button');
+const logoutMessage = document.getElementById('logout-message');
+function csrfToken() {
+  const item = document.cookie.split(';').map((value) => value.trim()).find((value) => value.startsWith('csrf_token='));
+  return item ? decodeURIComponent(item.slice('csrf_token='.length)) : '';
+}
+logoutButton.addEventListener('click', async () => {
+  logoutButton.disabled = true;
+  logoutButton.setAttribute('aria-busy', 'true');
+  logoutMessage.textContent = 'Signing out…';
+  try {
+    const response = await fetch('/api/auth/logout', {method:'POST', credentials:'same-origin', headers:{'X-CSRF-Token':csrfToken()}});
+    if (!response.ok) throw new Error('Sign-out request failed.');
+    window.location.assign('/login');
+  } catch (error) {
+    logoutMessage.textContent = 'Unable to sign out. Please try again.';
+    logoutButton.disabled = false;
+    logoutButton.removeAttribute('aria-busy');
+  }
+});
 </script></body></html>

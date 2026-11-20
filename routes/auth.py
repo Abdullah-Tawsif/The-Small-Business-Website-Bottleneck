@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from config.settings import get_settings
 from database.database import get_db
+from middleware.csrf_protection import CSRF_COOKIE_NAME, set_csrf_cookie
 from middleware.auth_middleware import get_current_user
 from models.user import User
 from schemas.user import UserPublic
@@ -40,6 +41,7 @@ def _set_session_cookie(response: Response, user: User) -> None:
         max_age=settings.access_token_expire_minutes * 60,
         path="/",
     )
+    set_csrf_cookie(response)
 
 
 def _clear_session_cookie(response: Response) -> None:
@@ -53,6 +55,13 @@ def _clear_session_cookie(response: Response) -> None:
         httponly=True,
         secure=settings.environment.lower() == "production",
         samesite="lax",
+    )
+    response.delete_cookie(
+        key=CSRF_COOKIE_NAME,
+        path="/",
+        httponly=False,
+        secure=settings.environment.lower() == "production",
+        samesite="strict",
     )
 
 

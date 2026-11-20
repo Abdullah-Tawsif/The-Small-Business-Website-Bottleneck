@@ -1,4 +1,3 @@
-import re
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
@@ -11,7 +10,7 @@ class LoginInput(BaseModel):
 
 
 class RegistrationInput(BaseModel):
-    """Admin-created account payload; public registration is not implied."""
+    """Public registration payload limited to least-privilege staff accounts."""
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     email: EmailStr
@@ -21,6 +20,6 @@ class RegistrationInput(BaseModel):
     @field_validator("full_name")
     @classmethod
     def name_must_contain_visible_text(cls, value: str) -> str:
-        if not re.search(r"[A-Za-z0-9]", value):
+        if not any(character.isalnum() for character in value):
             raise ValueError("Name must contain letters or numbers.")
         return value

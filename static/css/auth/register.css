@@ -1,9 +1,11 @@
-@import url('../base.css');
-
 .auth-page .register-card {
   min-height: 690px;
 }
 
 .auth-page .register-card .auth-heading h1 {
   max-width: 290px;
+}
+
+.auth-page .register-card .auth-heading h1 {
+  font-family: Manrope, sans-serif;
 }

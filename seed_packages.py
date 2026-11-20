@@ -5,9 +5,8 @@ from decimal import Decimal
 
 from sqlalchemy import func, select
 
-from database.database import SessionLocal, init_db
+from database.database import SessionLocal, verify_schema
 from models.package import Package
-
 
 PACKAGES = [
     {
@@ -105,8 +104,8 @@ PACKAGES = [
 def seed_packages() -> None:
     """Create missing packages without modifying existing records."""
 
-    # Ensure all application tables exist before seeding.
-    init_db()
+    # Refuse to write data before the versioned schema is installed.
+    verify_schema()
 
     created_count = 0
 
